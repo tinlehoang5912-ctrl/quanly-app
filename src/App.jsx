@@ -77,10 +77,11 @@ function loadData() {
 export default function App() {
   const [view, setView] = useState("org");
   const [data, setData] = useState(loadData);
+  const [cloudState, setCloudState] = useState("idle"); // idle | loading | loaded | err
   const [selected, setSelected] = useState(null);
   const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
-  const [autoSync, setAutoSync] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
   const fileRef = useRef(null);
   const logoRef = useRef(null);
 
@@ -105,12 +106,33 @@ export default function App() {
       setSyncState("ok"); setTimeout(() => setSyncState("idle"), 2500);
     } catch { setSyncState("err"); setTimeout(() => setSyncState("idle"), 3500); }
   };
-  // Tự lưu vào trình duyệt — reload không mất dữ liệu
+  // Tải dữ liệu từ Google Sheet khi mở app (đồng bộ 2 chiều)
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCloudState("loading");
+      try {
+        const res = await fetch(SHEET_URL + "?action=read&t=" + Date.now());
+        const json = await res.json();
+        if (!cancelled && json && json.positions) {
+          setData(json);
+          setCloudState("loaded");
+        } else { setCloudState("idle"); }
+      } catch (e) { if (!cancelled) setCloudState("err"); }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line
+  }, []);
+
+  // Tự lưu vào trình duyệt — reload không mất dữ liệu (dự phòng offline)
   React.useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) { /* sandbox chặn */ }
   }, [data]);
 
-  React.useEffect(() => { if (autoSync) { const t = setTimeout(() => syncToSheet(data), 1200); return () => clearTimeout(t); } }, [data, autoSync]);
+  React.useEffect(() => {
+    if (cloudState === "loading") return; // chưa tải xong thì chưa ghi, tránh ghi đè Sheet
+    if (autoSync) { const t = setTimeout(() => syncToSheet(data), 1200); return () => clearTimeout(t); }
+  }, [data, autoSync, cloudState]);
 
   // Position CRUD
   const addPosition = () => {
@@ -162,7 +184,12 @@ export default function App() {
           <input ref={logoRef} type="file" accept="image/*" onChange={handleLogo} style={{ display: "none" }} />
           <div>
             <input value={orgName} onChange={(e) => setOrgName(e.target.value)} style={{ background: "none", border: "none", outline: "none", color: "#fff", fontWeight: 700, fontSize: 18 }} />
-            <div style={{ color: "#bfdbfe", fontSize: 12 }}>Project & Org Management</div>
+            <div style={{ color: "#bfdbfe", fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              Project & Org Management
+              {cloudState === "loading" && <span style={{ color: "#fde68a" }}>• đang tải từ cloud...</span>}
+              {cloudState === "loaded" && <span style={{ color: "#86efac" }}>• đã tải từ cloud</span>}
+              {cloudState === "err" && <span style={{ color: "#fca5a5" }}>• không kết nối được cloud (dùng dữ liệu cục bộ)</span>}
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
