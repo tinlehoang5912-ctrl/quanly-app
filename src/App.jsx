@@ -61,9 +61,22 @@ const seed = {
   ],
 };
 
+const STORAGE_KEY = "quanly_congviec_data";
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const d = JSON.parse(saved);
+      if (d && d.positions) return d;
+    }
+  } catch (e) { /* localStorage không khả dụng (vd trong sandbox) */ }
+  return seed;
+}
+
 export default function App() {
   const [view, setView] = useState("org");
-  const [data, setData] = useState(seed);
+  const [data, setData] = useState(loadData);
   const [selected, setSelected] = useState(null);
   const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
@@ -92,6 +105,11 @@ export default function App() {
       setSyncState("ok"); setTimeout(() => setSyncState("idle"), 2500);
     } catch { setSyncState("err"); setTimeout(() => setSyncState("idle"), 3500); }
   };
+  // Tự lưu vào trình duyệt — reload không mất dữ liệu
+  React.useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) { /* sandbox chặn */ }
+  }, [data]);
+
   React.useEffect(() => { if (autoSync) { const t = setTimeout(() => syncToSheet(data), 1200); return () => clearTimeout(t); } }, [data, autoSync]);
 
   // Position CRUD
@@ -157,6 +175,7 @@ export default function App() {
           <button onClick={exportExcel} style={btn("rgba(255,255,255,.18)")}><Download size={15} /> Excel</button>
           <button onClick={exportJSON} style={btn("rgba(255,255,255,.18)")}><Download size={15} /> Backup</button>
           <button onClick={() => fileRef.current.click()} style={btn("rgba(255,255,255,.18)")}><Upload size={15} /> Khôi phục</button>
+          <button onClick={() => { if (window.confirm("Xóa toàn bộ dữ liệu và làm lại từ đầu? Hành động này không hoàn tác được.")) { try { localStorage.removeItem(STORAGE_KEY); } catch (e) {} setData(seed); } }} style={btn("rgba(255,255,255,.18)")}><Trash2 size={15} /> Làm lại</button>
           <input ref={fileRef} type="file" accept=".json" onChange={importJSON} style={{ display: "none" }} />
         </div>
         <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
