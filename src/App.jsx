@@ -31,23 +31,23 @@ const seed = {
   logo: null,
   positions: [
     { id: "pos1", title: "Ban Giám đốc", x: 360, y: 40, members: [
-      { id: "m1", name: "LE TIN", email: "tin.lehoang32@gmail.com", phone: "0900000000", avatar: null, plan: "",
+      { id: "m1", name: "LE TIN", email: "tin.lehoang32@gmail.com", phone: "0900000000", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t1", title: "Thiết lập cấu trúc dự án", status: "done", deadline: "2026-06-10", note: "Khởi tạo" },
           { id: "t2", title: "Phân quyền nhân sự", status: "in_progress", deadline: "2026-06-15", note: "" },
         ] },
     ] },
     { id: "pos2", title: "Phòng Kinh doanh", x: 80, y: 320, members: [
-      { id: "m2", name: "Nguyễn An", email: "an.nguyen@example.com", phone: "0911111111", avatar: null, plan: "",
+      { id: "m2", name: "Nguyễn An", email: "an.nguyen@example.com", phone: "0911111111", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t3", title: "Lập kế hoạch quý 2", status: "pending_review", deadline: "2026-06-08", note: "Chờ duyệt" },
           { id: "t4", title: "Báo cáo doanh số", status: "overdue", deadline: "2026-05-28", note: "Trễ" },
         ] },
-      { id: "m3", name: "Lê Cường", email: "cuong.le@example.com", phone: "0933333333", avatar: null, plan: "",
+      { id: "m3", name: "Lê Cường", email: "cuong.le@example.com", phone: "0933333333", avatar: null, plan: "", issue: "",
         tasks: [{ id: "t8", title: "Chăm sóc khách VIP", status: "in_progress", deadline: "2026-06-18", note: "" }] },
     ] },
     { id: "pos3", title: "Phòng Marketing", x: 640, y: 320, members: [
-      { id: "m4", name: "Trần Bình", email: "binh.tran@example.com", phone: "0922222222", avatar: null, plan: "",
+      { id: "m4", name: "Trần Bình", email: "binh.tran@example.com", phone: "0922222222", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t5", title: "Thiết kế campaign", status: "in_progress", deadline: "2026-06-20", note: "" },
           { id: "t6", title: "Đăng bài social", status: "not_started", deadline: "2026-06-25", note: "" },
@@ -65,6 +65,7 @@ export default function App() {
   const [view, setView] = useState("org");
   const [data, setData] = useState(seed);
   const [selected, setSelected] = useState(null);
+  const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
   const [autoSync, setAutoSync] = useState(false);
   const fileRef = useRef(null);
@@ -77,6 +78,7 @@ export default function App() {
   const setLogo = (v) => setData((d) => ({ ...d, logo: v }));
 
   const selectedPos = positions.find((p) => p.id === selected);
+  const selMemberData = selMember ? (() => { const p = positions.find((x) => x.id === selMember.posId); const m = p && p.members.find((x) => x.id === selMember.memberId); return m ? { ...m, posTitle: p.title, posId: p.id } : null; })() : null;
 
   const allMembers = useMemo(() => positions.flatMap((p) => p.members.map((m) => ({ ...m, posTitle: p.title, posId: p.id }))), [positions]);
   const allTasks = useMemo(() => allMembers.flatMap((m) => m.tasks.map((t) => ({ ...t, owner: m.name, posTitle: m.posTitle }))), [allMembers]);
@@ -110,7 +112,7 @@ export default function App() {
   const removeLink = (id) => setLinks((ls) => ls.filter((l) => l.id !== id));
 
   // Member/Task CRUD
-  const addMember = (posId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: [...pos.members, { id: uid(), name: "Nhân viên mới", email: "email@example.com", phone: "0000000000", avatar: null, plan: "", tasks: [] }] }); };
+  const addMember = (posId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: [...pos.members, { id: uid(), name: "Nhân viên mới", email: "email@example.com", phone: "0000000000", avatar: null, plan: "", issue: "", tasks: [] }] }); };
   const updateMember = (posId, mId, patch) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: pos.members.map((m) => (m.id === mId ? { ...m, ...patch } : m)) }); };
   const removeMember = (posId, mId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: pos.members.filter((m) => m.id !== mId) }); };
   const addTask = (posId, mId) => { const pos = positions.find((p) => p.id === posId); const m = pos.members.find((x) => x.id === mId); updateMember(posId, mId, { tasks: [...m.tasks, { id: uid(), title: "Công việc mới", status: "not_started", deadline: "", note: "" }] }); };
@@ -168,7 +170,7 @@ export default function App() {
         ))}
       </div>
 
-      {view === "org" && <OrgCanvas positions={positions} links={links} onSelect={setSelected} onAdd={addPosition} onMove={movePosition} onAddLink={addLink} onUpdateLink={updateLink} onRemoveLink={removeLink} />}
+      {view === "org" && <OrgCanvas positions={positions} links={links} onSelect={setSelected} onSelectMember={(posId, memberId) => setSelMember({ posId, memberId })} onAdd={addPosition} onMove={movePosition} onAddLink={addLink} onUpdateLink={updateLink} onRemoveLink={removeLink} />}
       {view === "dashboard" && <div style={{ padding: 28 }}><Dashboard positions={positions} statusCounts={statusCounts} overallPct={overallPct} allTasks={allTasks} allMembers={allMembers} /></div>}
       {view === "data" && <div style={{ padding: 28 }}><DataTable positions={positions} onSelect={setSelected} /></div>}
 
@@ -176,7 +178,16 @@ export default function App() {
         <PositionModal pos={selectedPos} onClose={() => setSelected(null)}
           onUpdatePos={(patch) => updatePosition(selectedPos.id, patch)} onRemovePos={() => removePosition(selectedPos.id)}
           onAddMember={() => addMember(selectedPos.id)} onUpdateMember={(mId, patch) => updateMember(selectedPos.id, mId, patch)} onRemoveMember={(mId) => removeMember(selectedPos.id, mId)}
-          onAddTask={(mId) => addTask(selectedPos.id, mId)} onUpdateTask={(mId, tId, patch) => updateTask(selectedPos.id, mId, tId, patch)} onRemoveTask={(mId, tId) => removeTask(selectedPos.id, mId, tId)} />
+          onOpenMember={(mId) => { setSelected(null); setSelMember({ posId: selectedPos.id, memberId: mId }); }} />
+      )}
+
+      {selMemberData && (
+        <MemberModal m={selMemberData} posTitle={selMemberData.posTitle} onClose={() => setSelMember(null)}
+          onUpdate={(patch) => updateMember(selMember.posId, selMember.memberId, patch)}
+          onAddTask={() => addTask(selMember.posId, selMember.memberId)}
+          onUpdateTask={(tId, patch) => updateTask(selMember.posId, selMember.memberId, tId, patch)}
+          onRemoveTask={(tId) => removeTask(selMember.posId, selMember.memberId, tId)}
+          onReport={(mem) => openMemberReport({ member: mem, posTitle: selMemberData.posTitle })} />
       )}
     </div>
   );
@@ -191,7 +202,7 @@ function Avatar({ m, size = 44 }) {
 }
 
 // ============ ORG CANVAS (kéo-thả + nối tay) ============
-function OrgCanvas({ positions, links, onSelect, onAdd, onMove, onAddLink, onUpdateLink, onRemoveLink }) {
+function OrgCanvas({ positions, links, onSelect, onSelectMember, onAdd, onMove, onAddLink, onUpdateLink, onRemoveLink }) {
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);       // {id, dx, dy} kéo khối
   const [connect, setConnect] = useState(null);  // {from, x, y} đang kéo dây nối
@@ -277,7 +288,11 @@ function OrgCanvas({ positions, links, onSelect, onAdd, onMove, onAddLink, onUpd
                 <div style={{ padding: 12 }}>
                   {p.members.length === 0 && <div style={{ textAlign: "center", color: "#cbd5e1", fontSize: 12, padding: 8 }}>Chưa có nhân viên</div>}
                   {p.members.map((m) => (
-                    <div key={m.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "5px 0", borderBottom: "1px solid #f1f5f9" }}>
+                    <div key={m.id} data-handle="1" onClick={(e) => { e.stopPropagation(); if (!drag) onSelectMember(p.id, m.id); }}
+                      title="Bấm xem chi tiết công việc"
+                      style={{ display: "flex", gap: 10, alignItems: "center", padding: "5px 4px", borderBottom: "1px solid #f1f5f9", borderRadius: 6, cursor: "pointer" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#eff6ff")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                       <Avatar m={m} size={34} />
                       <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: 600, fontSize: 13 }}>{m.name}</div><div style={{ fontSize: 10, color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.email}</div></div>
                       <span style={{ fontSize: 10, background: "#eff6ff", color: "#1e40af", padding: "1px 6px", borderRadius: 20, fontWeight: 600 }}>{m.tasks.length}</span>
@@ -388,11 +403,10 @@ function DataTable({ positions, onSelect }) {
 function Badge({ status }) { const s = STATUS[status]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: s.color + "18", color: s.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span>; }
 
 // ============ POSITION MODAL ============
-function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, onUpdateMember, onRemoveMember, onAddTask, onUpdateTask, onRemoveTask }) {
-  const [openMember, setOpenMember] = useState(pos.members[0] ? pos.members[0].id : null);
+function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, onUpdateMember, onRemoveMember, onOpenMember }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(780px,100%)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(640px,100%)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
         <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: 20, display: "flex", alignItems: "center", gap: 12 }}>
           <Network size={26} color="#fff" />
           <input value={pos.title} onChange={(e) => onUpdatePos({ title: e.target.value })} style={{ background: "none", border: "none", outline: "none", color: "#fff", fontSize: 20, fontWeight: 700, flex: 1 }} />
@@ -404,12 +418,21 @@ function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, on
             <button onClick={onAddMember} style={{ ...btn("#3b82f6"), padding: "7px 12px" }}><UserPlus size={15} /> Thêm nhân viên</button>
           </div>
           {pos.members.length === 0 && <div style={{ textAlign: "center", color: "#94a3b8", padding: 24 }}>Chưa có nhân viên. Bấm "Thêm nhân viên".</div>}
-          {pos.members.map((m) => (
-            <MemberCard key={m.id} m={m} open={openMember === m.id} onToggle={() => setOpenMember(openMember === m.id ? null : m.id)}
-              onUpdate={(patch) => onUpdateMember(m.id, patch)} onRemove={() => onRemoveMember(m.id)}
-              onAddTask={() => onAddTask(m.id)} onUpdateTask={(tId, patch) => onUpdateTask(m.id, tId, patch)} onRemoveTask={(tId) => onRemoveTask(m.id, tId)}
-              onReport={(mem) => openMemberReport({ member: mem, posTitle: pos.title })} />
-          ))}
+          {pos.members.map((m) => {
+            const done = m.tasks.filter((t) => t.status === "done").length;
+            const pct = m.tasks.length ? Math.round((done / m.tasks.length) * 100) : 0;
+            return (
+              <div key={m.id} style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, border: "1px solid #e2e8f0", borderRadius: 12, marginBottom: 10 }}>
+                <Avatar m={m} size={48} />
+                <div style={{ flex: 1 }}>
+                  <input value={m.name} onChange={(e) => onUpdateMember(m.id, { name: e.target.value })} style={{ border: "none", outline: "none", fontWeight: 700, fontSize: 15, background: "none", width: "100%" }} />
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{m.email} • {m.tasks.length} việc • {pct}% hoàn thành</div>
+                </div>
+                <button onClick={() => onOpenMember(m.id)} style={{ ...btn("#10b981"), padding: "7px 12px" }}>Xem chi tiết</button>
+                <button onClick={() => onRemoveMember(m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }}><Trash2 size={16} /></button>
+              </div>
+            );
+          })}
         </div>
         <div style={{ padding: 14, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between" }}>
           <button onClick={onRemovePos} style={{ ...btn("#ef4444"), padding: "9px 14px" }}><Trash2 size={15} /> Xóa vị trí</button>
@@ -420,35 +443,65 @@ function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, on
   );
 }
 
-function MemberCard({ m, open, onToggle, onUpdate, onRemove, onAddTask, onUpdateTask, onRemoveTask, onReport }) {
-  const done = m.tasks.filter((t) => t.status === "done").length;
-  const pct = m.tasks.length ? Math.round((done / m.tasks.length) * 100) : 0;
+function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, onRemoveTask, onReport }) {
   const avaRef = useRef(null);
   const handleAva = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => onUpdate({ avatar: ev.target.result }); r.readAsDataURL(f); };
+  const total = m.tasks.length;
+  const cnt = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])); m.tasks.forEach((t) => { cnt[t.status]++; });
+  const pct = total ? Math.round((cnt.done / total) * 100) : 0;
+  // donut bằng conic-gradient
+  let acc = 0; const segs = STATUS_KEYS.map((k) => { const v = cnt[k]; const pv = total ? (v / total) * 100 : 0; const seg = STATUS[k].color + " " + acc + "% " + (acc + pv) + "%"; acc += pv; return v > 0 ? seg : null; }).filter(Boolean).join(",");
+  // vướng mắc tự động: việc quá hạn / chờ duyệt
+  const autoIssues = m.tasks.filter((t) => t.status === "overdue" || t.status === "pending_review");
+
   return (
-    <div style={{ border: "1px solid #e2e8f0", borderRadius: 14, marginBottom: 12, overflow: "hidden" }}>
-      <div style={{ display: "flex", gap: 14, alignItems: "center", padding: 14, background: "#f8fafc" }}>
-        <div onClick={() => avaRef.current.click()} title="Bấm để đổi ảnh" style={{ position: "relative", cursor: "pointer" }}>
-          <Avatar m={m} size={64} />
-          <div style={{ position: "absolute", bottom: 0, right: 0, background: "#3b82f6", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}><ImageIcon size={11} color="#fff" /></div>
-        </div>
-        <input ref={avaRef} type="file" accept="image/*" onChange={handleAva} style={{ display: "none" }} />
-        <div style={{ flex: 1 }}>
-          <input value={m.name} onChange={(e) => onUpdate({ name: e.target.value })} style={{ border: "none", outline: "none", fontWeight: 700, fontSize: 15, background: "none", width: "100%" }} />
-          <div style={{ display: "flex", gap: 14, marginTop: 4 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={13} color="#94a3b8" /><input value={m.email} onChange={(e) => onUpdate({ email: e.target.value })} style={{ border: "none", outline: "none", fontSize: 12, color: "#64748b", background: "none", width: 150 }} /></span>
-            <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={13} color="#94a3b8" /><input value={m.phone} onChange={(e) => onUpdate({ phone: e.target.value })} style={{ border: "none", outline: "none", fontSize: 12, color: "#64748b", background: "none", width: 110 }} /></span>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 60 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(820px,100%)", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+        {/* header */}
+        <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: 22, display: "flex", gap: 16, alignItems: "center", position: "relative" }}>
+          <div onClick={() => avaRef.current.click()} title="Đổi ảnh" style={{ position: "relative", cursor: "pointer" }}>
+            <Avatar m={m} size={72} />
+            <div style={{ position: "absolute", bottom: 0, right: 0, background: "#10b981", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #fff" }}><ImageIcon size={12} color="#fff" /></div>
           </div>
+          <input ref={avaRef} type="file" accept="image/*" onChange={handleAva} style={{ display: "none" }} />
+          <div style={{ flex: 1 }}>
+            <input value={m.name} onChange={(e) => onUpdate({ name: e.target.value })} style={{ background: "none", border: "none", outline: "none", color: "#fff", fontSize: 22, fontWeight: 700, width: "100%" }} />
+            <div style={{ color: "#bfdbfe", fontSize: 13, marginTop: 2 }}>{posTitle}</div>
+            <div style={{ display: "flex", gap: 14, marginTop: 6 }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={13} color="#bfdbfe" /><input value={m.email} onChange={(e) => onUpdate({ email: e.target.value })} style={{ background: "none", border: "none", outline: "none", fontSize: 12, color: "#dbeafe", width: 170 }} /></span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={13} color="#bfdbfe" /><input value={m.phone} onChange={(e) => onUpdate({ phone: e.target.value })} style={{ background: "none", border: "none", outline: "none", fontSize: 12, color: "#dbeafe", width: 120 }} /></span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
         </div>
-        <div style={{ textAlign: "center" }}><div style={{ fontSize: 20, fontWeight: 800, color: "#1e40af" }}>{pct}%</div><div style={{ fontSize: 10, color: "#94a3b8" }}>{m.tasks.length} việc</div></div>
-        <button onClick={onToggle} style={{ ...btn("#3b82f6"), padding: "6px 10px" }}>{open ? "Thu gọn" : "Công việc"}</button>
-        <button onClick={() => onReport(m)} title="Xuất báo cáo cá nhân" style={{ ...btn("#10b981"), padding: "6px 10px" }}><FileText size={14} /> Báo cáo</button>
-        <button onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }}><Trash2 size={16} /></button>
-      </div>
-      {open && (
-        <div style={{ padding: 14 }}>
-          <button onClick={onAddTask} style={{ ...btn("#10b981"), padding: "6px 11px", marginBottom: 10 }}><Plus size={14} /> Thêm việc</button>
-          {m.tasks.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, textAlign: "center", padding: 10 }}>Chưa có việc</div>}
+
+        <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+          {/* THỐNG KÊ */}
+          <div style={{ display: "flex", gap: 20, alignItems: "center", padding: 16, background: "#f8fafc", borderRadius: 14, marginBottom: 18 }}>
+            <div style={{ position: "relative", width: 110, height: 110, flexShrink: 0 }}>
+              <div style={{ width: 110, height: 110, borderRadius: "50%", background: segs ? "conic-gradient(" + segs + ")" : "#e2e8f0" }} />
+              <div style={{ position: "absolute", inset: 14, background: "#fff", borderRadius: "50%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, color: "#1e40af" }}>{pct}%</div>
+                <div style={{ fontSize: 10, color: "#94a3b8" }}>hoàn thành</div>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {STATUS_KEYS.filter((k) => cnt[k] > 0).map((k) => (
+                <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: STATUS[k].color + "18", color: STATUS[k].color, padding: "5px 11px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS[k].color }} />{STATUS[k].label}: {cnt[k]}
+                </span>
+              ))}
+              {total === 0 && <span style={{ color: "#94a3b8", fontSize: 13 }}>Chưa có công việc</span>}
+            </div>
+            <button onClick={() => onReport(m)} style={{ ...btn("#10b981"), padding: "9px 14px" }}><FileText size={15} /> Báo cáo</button>
+          </div>
+
+          {/* CÔNG VIỆC */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>Công việc đang theo ({total})</div>
+            <button onClick={onAddTask} style={{ ...btn("#3b82f6"), padding: "6px 11px" }}><Plus size={14} /> Thêm việc</button>
+          </div>
+          {total === 0 && <div style={{ color: "#94a3b8", fontSize: 13, textAlign: "center", padding: 14 }}>Chưa có việc</div>}
           {m.tasks.map((t) => (
             <div key={t.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 8, borderLeft: "4px solid " + STATUS[t.status].color }}>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
@@ -462,12 +515,36 @@ function MemberCard({ m, open, onToggle, onUpdate, onRemove, onAddTask, onUpdate
               </div>
             </div>
           ))}
-          <div style={{ marginTop: 12, padding: 12, background: "#eff6ff", borderRadius: 10, border: "1px solid #dbeafe" }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#1e40af", marginBottom: 6 }}>Kế hoạch tuần tới</div>
-            <textarea value={m.plan || ""} onChange={(e) => onUpdate({ plan: e.target.value })} placeholder="Nhập kế hoạch, mục tiêu cho tuần tiếp theo..." rows={3} style={{ width: "100%", border: "1px solid #bfdbfe", borderRadius: 8, padding: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }} />
+
+          {/* KẾ HOẠCH */}
+          <div style={{ marginTop: 16, padding: 14, background: "#eff6ff", borderRadius: 12, border: "1px solid #dbeafe" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", marginBottom: 8 }}>📋 Kế hoạch tuần tới</div>
+            <textarea value={m.plan || ""} onChange={(e) => onUpdate({ plan: e.target.value })} placeholder="Mục tiêu, kế hoạch cho tuần tiếp theo..." rows={3} style={{ width: "100%", border: "1px solid #bfdbfe", borderRadius: 8, padding: 9, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }} />
+          </div>
+
+          {/* VƯỚNG MẮC */}
+          <div style={{ marginTop: 12, padding: 14, background: "#fef2f2", borderRadius: 12, border: "1px solid #fecaca" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", marginBottom: 8 }}>⚠️ Vướng mắc</div>
+            {autoIssues.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: "#991b1b", marginBottom: 5, fontWeight: 600 }}>Tự động phát hiện (quá hạn / chờ duyệt):</div>
+                {autoIssues.map((t) => (
+                  <div key={t.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12, padding: "4px 0" }}>
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: STATUS[t.status].color }} />
+                    <span style={{ flex: 1, fontWeight: 600 }}>{t.title}</span>
+                    <span style={{ color: STATUS[t.status].color, fontWeight: 600 }}>{STATUS[t.status].label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <textarea value={m.issue || ""} onChange={(e) => onUpdate({ issue: e.target.value })} placeholder="Ghi chú vướng mắc, khó khăn cần hỗ trợ..." rows={2} style={{ width: "100%", border: "1px solid #fecaca", borderRadius: 8, padding: 9, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }} />
           </div>
         </div>
-      )}
+
+        <div style={{ padding: 14, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end" }}>
+          <button onClick={onClose} style={{ ...btn("#1e40af"), padding: "9px 18px" }}>Đóng</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -503,7 +580,11 @@ function openMemberReport({ member, posTitle, orgName, logo }) {
   const next7 = m.tasks.filter((t) => t.deadline && t.status !== "done").map((t) => ({ ...t, d: new Date(t.deadline) })).filter((t) => !isNaN(t.d)).filter((t) => { const days = Math.ceil((t.d - todayD) / 86400000); return days >= 0 && days <= 7; }).sort((a, b) => a.d - b.d);
   const planTasks = next7.length ? next7.map((t) => { const days = Math.ceil((t.d - todayD) / 86400000); const lbl = days === 0 ? "Hôm nay" : ("Còn " + days + " ngày"); return '<div style="display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9"><div style="width:9px;height:9px;border-radius:50%;background:#3b82f6"></div><div style="flex:1;font-size:13px;font-weight:600">' + esc(t.title) + '</div><div style="font-size:12px;color:#3b82f6;font-weight:700">' + lbl + '</div><div style="font-size:11px;color:#94a3b8;width:90px;text-align:right">' + esc(t.deadline) + '</div></div>'; }).join("") : '<div style="color:#94a3b8;padding:8px;font-size:13px">Không có việc đến hạn trong 7 ngày tới</div>';
   const planNote = m.plan ? '<div style="margin-top:12px;padding:12px;background:#eff6ff;border-radius:8px;border:1px solid #dbeafe;font-size:13px;white-space:pre-wrap">' + esc(m.plan) + '</div>' : '';
+  const autoIssues = m.tasks.filter((t) => t.status === "overdue" || t.status === "pending_review");
+  const issueAuto = autoIssues.length ? autoIssues.map((t) => '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:' + STATUS[t.status].color + '"></span><span style="flex:1;font-weight:600">' + esc(t.title) + '</span><span style="color:' + STATUS[t.status].color + ';font-weight:600;font-size:12px">' + STATUS[t.status].label + '</span></div>').join("") : '';
+  const issueNote = m.issue ? '<div style="margin-top:8px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;font-size:13px;white-space:pre-wrap">' + esc(m.issue) + '</div>' : '';
+  const issueSection = (autoIssues.length || m.issue) ? ('<div class="sec"><h2 style="color:#dc2626">Vướng mắc</h2>' + issueAuto + issueNote + '</div>') : '<div class="sec"><h2 style="color:#dc2626">Vướng mắc</h2><div style="color:#94a3b8;font-size:13px">Không có vướng mắc</div></div>';
   const avatarHtml = m.avatar ? '<img src="' + m.avatar + '" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #fff">' : '<div style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#fff">' + esc((m.name || "?").split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase()) + '</div>';
-  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo - ' + esc(m.name) + '</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}body{background:#f1f5f9;color:#0f172a;padding:30px}.wrap{max-width:780px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,.08)}.head{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:28px;display:flex;align-items:center;gap:20px}.head h1{font-size:24px}.head .role{color:#bfdbfe;font-size:14px;margin-top:3px}.head .contact{color:#dbeafe;font-size:12px;margin-top:6px}.pctbox{margin-left:auto;text-align:center}.pctbox .big{font-size:38px;font-weight:800}.pctbox .sm{font-size:11px;color:#bfdbfe}.sec{padding:0 26px 22px}.sec:first-of-type{padding-top:22px}.sec h2{font-size:15px;margin-bottom:12px;color:#1e40af}.grid2{display:grid;grid-template-columns:180px 1fr;gap:22px;align-items:center}.donut{width:160px;height:160px;border-radius:50%;margin:0 auto}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f8fafc;text-align:left;padding:9px;color:#64748b;font-size:11px;text-transform:uppercase}td{padding:9px;border-top:1px solid #f1f5f9;vertical-align:top}.btn{position:fixed;top:20px;right:20px;background:#1e40af;color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(30,64,175,.3)}@media print{.btn{display:none}body{padding:0;background:#fff}.wrap{box-shadow:none}}</style></head><body><button class="btn" onclick="window.print()">In / Lưu PDF</button><div class="wrap"><div class="head">' + avatarHtml + '<div><h1>' + esc(m.name) + '</h1><div class="role">' + esc(posTitle || "") + '</div><div class="contact">' + esc(m.email) + ' • ' + esc(m.phone) + '</div></div><div class="pctbox"><div class="big">' + pct + '%</div><div class="sm">hoàn thành • ' + total + ' việc</div></div></div><div class="sec"><h2>Tổng quan trạng thái</h2><div class="grid2"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div>' + (legend || '<span style="color:#94a3b8">Chưa có dữ liệu</span>') + '</div></div></div><div class="sec"><h2>Danh sách công việc</h2><table><thead><tr><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + rows + '</tbody></table></div><div class="sec"><h2>Kế hoạch tuần tiếp theo</h2>' + planTasks + planNote + '</div><div class="sec" style="color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #f1f5f9;padding-top:14px">Xuất ngày ' + today + '</div></div></body></html>';
+  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo - ' + esc(m.name) + '</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}body{background:#f1f5f9;color:#0f172a;padding:30px}.wrap{max-width:780px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,.08)}.head{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:28px;display:flex;align-items:center;gap:20px}.head h1{font-size:24px}.head .role{color:#bfdbfe;font-size:14px;margin-top:3px}.head .contact{color:#dbeafe;font-size:12px;margin-top:6px}.pctbox{margin-left:auto;text-align:center}.pctbox .big{font-size:38px;font-weight:800}.pctbox .sm{font-size:11px;color:#bfdbfe}.sec{padding:0 26px 22px}.sec:first-of-type{padding-top:22px}.sec h2{font-size:15px;margin-bottom:12px;color:#1e40af}.grid2{display:grid;grid-template-columns:180px 1fr;gap:22px;align-items:center}.donut{width:160px;height:160px;border-radius:50%;margin:0 auto}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f8fafc;text-align:left;padding:9px;color:#64748b;font-size:11px;text-transform:uppercase}td{padding:9px;border-top:1px solid #f1f5f9;vertical-align:top}.btn{position:fixed;top:20px;right:20px;background:#1e40af;color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(30,64,175,.3)}@media print{.btn{display:none}body{padding:0;background:#fff}.wrap{box-shadow:none}}</style></head><body><button class="btn" onclick="window.print()">In / Lưu PDF</button><div class="wrap"><div class="head">' + avatarHtml + '<div><h1>' + esc(m.name) + '</h1><div class="role">' + esc(posTitle || "") + '</div><div class="contact">' + esc(m.email) + ' • ' + esc(m.phone) + '</div></div><div class="pctbox"><div class="big">' + pct + '%</div><div class="sm">hoàn thành • ' + total + ' việc</div></div></div><div class="sec"><h2>Tổng quan trạng thái</h2><div class="grid2"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div>' + (legend || '<span style="color:#94a3b8">Chưa có dữ liệu</span>') + '</div></div></div><div class="sec"><h2>Danh sách công việc</h2><table><thead><tr><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + rows + '</tbody></table></div><div class="sec"><h2>Kế hoạch tuần tiếp theo</h2>' + planTasks + planNote + '</div>' + issueSection + '<div class="sec" style="color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #f1f5f9;padding-top:14px">Xuất ngày ' + today + '</div></div></body></html>';
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } else { window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank"); }
 }
