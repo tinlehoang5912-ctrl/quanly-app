@@ -79,6 +79,44 @@ const seed = {
 
 const STORAGE_KEY = "quanly_congviec_data";
 
+// Upload ảnh lên Google Drive qua Apps Script, nhận về URL
+async function uploadImage(base64, name) {
+  try {
+    const res = await fetch(SHEET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "uploadImage", image: base64, name: name || "image" }),
+    });
+    const json = await res.json();
+    if (json && json.url) return json.url;
+  } catch (e) { /* thất bại thì trả null, app dùng tạm base64 */ }
+  return null;
+}
+
+// Nén ảnh xuống tối đa maxSize px. Giữ nền trong suốt nếu là PNG.
+function compressImage(file, maxSize, cb) {
+  const isPng = file.type === "image/png";
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxSize) { height = height * maxSize / width; width = maxSize; }
+      else if (height > maxSize) { width = width * maxSize / height; height = maxSize; }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, width, height); // giữ canvas trong suốt
+      ctx.drawImage(img, 0, 0, width, height);
+      // PNG -> giữ PNG (trong suốt). Khác -> JPEG (nhẹ hơn).
+      cb(isPng ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => cb(ev.target.result);
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function loadData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -94,6 +132,7 @@ export default function App() {
   const [view, setView] = useState("org");
   const [data, setData] = useState(loadData);
   const [cloudState, setCloudState] = useState("idle"); // idle | loading | loaded | err
+  const [screen, setScreen] = useState("landing"); // landing | app
   const [selected, setSelected] = useState(null);
   const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
@@ -180,7 +219,17 @@ export default function App() {
   const updateTask = (posId, mId, tId, patch) => { const pos = positions.find((p) => p.id === posId); const m = pos.members.find((x) => x.id === mId); updateMember(posId, mId, { tasks: m.tasks.map((t) => (t.id === tId ? { ...t, ...patch } : t)) }); };
   const removeTask = (posId, mId, tId) => { const pos = positions.find((p) => p.id === posId); const m = pos.members.find((x) => x.id === mId); updateMember(posId, mId, { tasks: m.tasks.filter((t) => t.id !== tId) }); };
 
-  const handleLogo = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => setLogo(ev.target.result); r.readAsDataURL(f); };
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const handleLogo = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    setUploadingLogo(true);
+    compressImage(f, 400, async (b64) => {
+      setLogo(b64); // hiện tạm ngay
+      const url = await uploadImage(b64, "logo");
+      if (url) setLogo(url); // thay bằng URL Drive (nhẹ cho Sheet)
+      setUploadingLogo(false);
+    });
+  };
 
   const exportExcel = () => {
     const rows = [["Vị trí", "Nhân viên", "Email", "SĐT", "Công việc", "Trạng thái", "Deadline", "Ghi chú"]];
@@ -196,12 +245,13 @@ export default function App() {
   const exportReport = () => openReport({ orgName, logo, positions, allTasks, statusCounts, overallPct, allMembers });
 
   return (
-    <div style={{ fontFamily: "'Inter',system-ui,sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
+    <div style={{ fontFamily: "'Inter',system-ui,sans-serif", height: "100vh", overflow: "hidden", color: "#0f172a" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
         @keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
         @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes bounceDown{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
         .landing-hero{background:linear-gradient(120deg,#0c4a6e,#0369a1,#0891b2,#0d9488);background-size:300% 300%;animation:gradientMove 12s ease infinite}
         .blob{position:absolute;border-radius:50%;filter:blur(8px);animation:floatY 7s ease-in-out infinite}
         .fade-up{animation:fadeUp .8s cubic-bezier(.2,.8,.2,1) both}
@@ -209,39 +259,47 @@ export default function App() {
         .app-tab:hover{background:#f1f5f9!important}
       `}</style>
 
-      {/* ===== LANDING ngắn phía trên ===== */}
-      <div className="landing-hero" style={{ position: "relative", color: "#fff", padding: "70px 28px 80px", overflow: "hidden", textAlign: "center" }}>
-        <div className="blob" style={{ width: 200, height: 200, background: "rgba(255,255,255,.08)", top: -40, left: "12%" }} />
-        <div className="blob" style={{ width: 150, height: 150, background: "rgba(255,255,255,.07)", bottom: -30, right: "15%", animationDelay: "2s" }} />
-        <div className="blob" style={{ width: 90, height: 90, background: "rgba(255,255,255,.06)", top: "40%", right: "30%", animationDelay: "4s" }} />
-        <div style={{ position: "relative", maxWidth: 760, margin: "0 auto" }}>
-          {logo && <img src={logo} alt="logo" className="fade-up" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", background: "#fff", padding: 4, marginBottom: 18 }} />}
-          <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 44, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, marginBottom: 14 }}>{orgName}</h1>
-          <p className="fade-up" style={{ fontSize: 17, color: "#bae6fd", maxWidth: 540, margin: "0 auto 28px", animationDelay: ".1s", lineHeight: 1.6 }}>
-            Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
-          </p>
-          <div className="fade-up" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", animationDelay: ".2s" }}>
-            <button onClick={() => document.getElementById("app-section").scrollIntoView({ behavior: "smooth" })} style={{ background: "#fff", color: "#0369a1", border: "none", padding: "14px 30px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.18)" }}>Vào ứng dụng →</button>
-            <button onClick={exportReport} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)", padding: "14px 26px", borderRadius: 12, fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Xem báo cáo</button>
-          </div>
-          {/* 3 điểm nổi bật */}
-          <div className="fade-up" style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 44, animationDelay: ".3s" }}>
-            {[{ icon: Network, t: "Sơ đồ kéo-thả", d: "Thiết kế tổ chức trực quan" }, { icon: LayoutDashboard, t: "Dashboard", d: "Thống kê thời gian thực" }, { icon: Cloud, t: "Đồng bộ cloud", d: "Truy cập mọi thiết bị" }].map((f, i) => (
-              <div key={i} style={{ background: "rgba(255,255,255,.1)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 16, padding: "18px 22px", width: 200, textAlign: "left" }}>
-                <f.icon size={24} color="#fff" />
-                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10 }}>{f.t}</div>
-                <div style={{ fontSize: 12, color: "#bae6fd", marginTop: 3 }}>{f.d}</div>
-              </div>
-            ))}
+      {/* Khung trượt dọc: 2 màn full chồng nhau, dịch theo screen */}
+      <div style={{ height: "200vh", transform: screen === "app" ? "translateY(-100vh)" : "translateY(0)", transition: "transform .7s cubic-bezier(.76,0,.24,1)" }}>
+
+        {/* ===== MÀN 1: LANDING full màn hình ===== */}
+        <div className="landing-hero" style={{ position: "relative", height: "100vh", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: "28px", overflow: "hidden", textAlign: "center" }}>
+          <div className="blob" style={{ width: 280, height: 280, background: "rgba(255,255,255,.08)", top: "8%", left: "10%" }} />
+          <div className="blob" style={{ width: 200, height: 200, background: "rgba(255,255,255,.07)", bottom: "10%", right: "12%", animationDelay: "2s" }} />
+          <div className="blob" style={{ width: 120, height: 120, background: "rgba(255,255,255,.06)", top: "30%", right: "28%", animationDelay: "4s" }} />
+          <div style={{ position: "relative", maxWidth: 820, margin: "0 auto" }}>
+            {logo && <img src={logo} alt="logo" className="fade-up" style={{ width: 76, height: 76, borderRadius: 18, objectFit: "cover", background: "#fff", padding: 4, marginBottom: 22 }} />}
+            <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 56, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1.05, marginBottom: 16 }}>{orgName}</h1>
+            <p className="fade-up" style={{ fontSize: 19, color: "#bae6fd", maxWidth: 580, margin: "0 auto 32px", animationDelay: ".1s", lineHeight: 1.6 }}>
+              Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
+            </p>
+            <div className="fade-up" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", animationDelay: ".2s" }}>
+              <button onClick={() => setScreen("app")} style={{ background: "#fff", color: "#0369a1", border: "none", padding: "16px 36px", borderRadius: 14, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>Vào ứng dụng →</button>
+              <button onClick={exportReport} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)", padding: "16px 30px", borderRadius: 14, fontSize: 17, fontWeight: 600, cursor: "pointer" }}>Xem báo cáo</button>
+            </div>
+            <div className="fade-up" style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 50, animationDelay: ".3s" }}>
+              {[{ icon: Network, t: "Sơ đồ kéo-thả", d: "Thiết kế tổ chức trực quan" }, { icon: LayoutDashboard, t: "Dashboard", d: "Thống kê thời gian thực" }, { icon: Cloud, t: "Đồng bộ cloud", d: "Truy cập mọi thiết bị" }].map((f, i) => (
+                <div key={i} style={{ background: "rgba(255,255,255,.1)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 16, padding: "20px 24px", width: 210, textAlign: "left" }}>
+                  <f.icon size={26} color="#fff" />
+                  <div style={{ fontWeight: 700, fontSize: 16, marginTop: 12 }}>{f.t}</div>
+                  <div style={{ fontSize: 13, color: "#bae6fd", marginTop: 4 }}>{f.d}</div>
+                </div>
+              ))}
+            </div>
+            <div onClick={() => setScreen("app")} style={{ position: "absolute", bottom: -90, left: "50%", transform: "translateX(-50%)", cursor: "pointer", animation: "bounceDown 1.8s ease-in-out infinite", fontSize: 13, color: "#bae6fd", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <span>Trượt lên</span><span style={{ fontSize: 22 }}>↑</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div id="app-section" />
-      <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(30,64,175,.25)", flexWrap: "wrap", gap: 12 }}>
+        {/* ===== MÀN 2: APP full màn hình ===== */}
+        <div style={{ height: "100vh", overflowY: "auto", background: "#f1f5f9" }}>
+        <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(30,64,175,.25)", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div onClick={() => logoRef.current.click()} title="Tải logo tổ chức" style={{ width: 46, height: 46, borderRadius: 10, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", border: "1px dashed rgba(255,255,255,.4)" }}>
-            {logo ? <img src={logo} alt="logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <ImageIcon size={20} color="#fff" />}
+          <button onClick={() => setScreen("landing")} title="Quay lại trang giới thiệu" style={{ background: "rgba(255,255,255,.18)", border: "none", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>↑</button>
+          <div onClick={() => logoRef.current.click()} title="Tải logo tổ chức" style={{ height: 52, minWidth: 52, maxWidth: 220, padding: logo ? "4px 8px" : 0, borderRadius: 10, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", border: "1px dashed rgba(255,255,255,.4)" }}>
+            {logo ? <img src={logo} alt="logo" style={{ maxHeight: "100%", maxWidth: "100%", objectFit: "contain", opacity: uploadingLogo ? 0.5 : 1 }} /> : <ImageIcon size={20} color="#fff" />}
+            {uploadingLogo && <div style={{ position: "absolute", fontSize: 9, color: "#fff" }}>...</div>}
           </div>
           <input ref={logoRef} type="file" accept="image/*" onChange={handleLogo} style={{ display: "none" }} />
           <div>
@@ -281,6 +339,8 @@ export default function App() {
       {view === "org" && <OrgCanvas positions={positions} links={links} tiers={tiers} onSelect={setSelected} onSelectMember={(posId, memberId) => setSelMember({ posId, memberId })} onAdd={addPosition} onMove={movePosition} onAddLink={addLink} onUpdateLink={updateLink} onRemoveLink={removeLink} onAddTier={addTier} onUpdateTier={updateTier} onRemoveTier={removeTier} />}
       {view === "dashboard" && <div style={{ padding: 28 }}><Dashboard positions={positions} statusCounts={statusCounts} overallPct={overallPct} allTasks={allTasks} allMembers={allMembers} /></div>}
       {view === "data" && <div style={{ padding: 28 }}><DataTable positions={positions} onSelect={setSelected} /></div>}
+        </div>{/* hết MÀN 2 app */}
+      </div>{/* hết khung trượt */}
 
       {selectedPos && (
         <PositionModal pos={selectedPos} tiers={tiers} onClose={() => setSelected(null)}
@@ -586,7 +646,17 @@ function PositionModal({ pos, tiers, onClose, onUpdatePos, onRemovePos, onAddMem
 
 function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, onRemoveTask, onReport }) {
   const avaRef = useRef(null);
-  const handleAva = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => onUpdate({ avatar: ev.target.result }); r.readAsDataURL(f); };
+  const [uploadingAva, setUploadingAva] = useState(false);
+  const handleAva = (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    setUploadingAva(true);
+    compressImage(f, 400, async (b64) => {
+      onUpdate({ avatar: b64 }); // hiện tạm ngay
+      const url = await uploadImage(b64, "avatar");
+      if (url) onUpdate({ avatar: url }); // thay bằng URL Drive
+      setUploadingAva(false);
+    });
+  };
   const total = m.tasks.length;
   const cnt = Object.fromEntries(STATUS_KEYS.map((k) => [k, 0])); m.tasks.forEach((t) => { cnt[t.status]++; });
   const pct = total ? Math.round((cnt.done / total) * 100) : 0;
