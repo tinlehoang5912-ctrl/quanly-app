@@ -152,7 +152,7 @@ export default function App() {
   const removeTier = (id) => { setTiers((ts) => ts.filter((t) => t.id !== id)); setPositions((ps) => ps.map((p) => (p.tierId === id ? { ...p, tierId: null } : p))); };
 
   const selectedPos = positions.find((p) => p.id === selected);
-  const selMemberData = selMember ? (() => { const p = positions.find((x) => x.id === selMember.posId); const m = p && p.members.find((x) => x.id === selMember.memberId); return m ? { ...m, posTitle: p.title, posId: p.id } : null; })() : null;
+  const selMemberData = selMember ? (() => { const p = positions.find((x) => x.id === selMember.posId); const m = p && p.members.find((x) => x.id === selMember.memberId); return m ? { ...m, posTitle: p.title, posId: p.id, hideTasks: !!p.hideTasks } : null; })() : null;
 
   const allMembers = useMemo(() => positions.flatMap((p) => p.members.map((m) => ({ ...m, posTitle: p.title, posId: p.id }))), [positions]);
   const allTasks = useMemo(() => allMembers.flatMap((m) => m.tasks.map((t) => ({ ...t, owner: m.name, posTitle: m.posTitle }))), [allMembers]);
@@ -567,29 +567,63 @@ function Panel({ title, children }) { return <div style={{ background: "#fff", b
 const Empty = () => <div style={{ textAlign: "center", color: "#94a3b8", padding: 60 }}>Chưa có dữ liệu</div>;
 
 // ============ DATA TABLE ============
-function DataTable({ positions, onSelect }) {
+function DataTable({ positions, onSelect, onOpenMember }) {
   const [q, setQ] = useState("");
-  const rows = positions.flatMap((p) => p.members.length ? p.members.flatMap((m) => m.tasks.length ? m.tasks.map((t) => ({ p, m, t })) : [{ p, m, t: null }]) : [{ p, m: null, t: null }]);
-  const filtered = rows.filter(({ p, m, t }) => (p.title + (m ? m.name : "") + (t ? t.title : "")).toLowerCase().includes(q.toLowerCase()));
+  const [expanded, setExpanded] = useState({});
+  const toggle = (id) => setExpanded((e) => ({ ...e, [id]: !e[id] }));
+
+  // danh sách nhân sự (kèm vị trí), lọc theo tìm kiếm
+  const members = positions.flatMap((p) => p.members.map((m) => ({ p, m })));
+  const filtered = members.filter(({ p, m }) => (p.title + " " + m.name + " " + m.tasks.map((t) => t.title).join(" ")).toLowerCase().includes(q.toLowerCase()));
+
   return (
     <div style={{ background: "#fff", borderRadius: 14, boxShadow: "0 2px 10px rgba(15,23,42,.05)", border: "1px solid #e2e8f0", overflow: "hidden" }}>
-      <div style={{ padding: 16, borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}><Search size={18} color="#94a3b8" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm vị trí, nhân viên, công việc..." style={{ border: "none", outline: "none", fontSize: 14, flex: 1 }} /></div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-          <thead><tr style={{ background: "#f8fafc", color: "#64748b", textAlign: "left" }}>{["Vị trí", "Nhân viên", "Công việc", "Trạng thái", "Deadline", "Ghi chú"].map((h) => <th key={h} style={{ padding: "12px 16px", fontWeight: 600, fontSize: 12, textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
-          <tbody>
-            {filtered.map(({ p, m, t }, i) => (
-              <tr key={i} onClick={() => onSelect(p.id)} style={{ borderTop: "1px solid #f1f5f9", cursor: "pointer" }} onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <td style={{ padding: "12px 16px", fontWeight: 600, color: "#1e40af" }}>{p.title}</td>
-                <td style={{ padding: "12px 16px" }}>{m ? <span style={{ display: "flex", alignItems: "center", gap: 8 }}><Avatar m={m} size={28} /> {m.name}</span> : <span style={{ color: "#cbd5e1" }}>— trống —</span>}</td>
-                <td style={{ padding: "12px 16px" }}>{t ? t.title : <span style={{ color: "#cbd5e1" }}>—</span>}</td>
-                <td style={{ padding: "12px 16px" }}>{t && <Badge status={t.status} />}</td>
-                <td style={{ padding: "12px 16px", color: "#64748b" }}>{t ? t.deadline : "-"}</td>
-                <td style={{ padding: "12px 16px", color: "#64748b" }}>{t ? t.note : "-"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ padding: 16, borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: 10 }}><Search size={18} color="#94a3b8" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tìm nhân viên, vị trí, công việc..." style={{ border: "none", outline: "none", fontSize: 14, flex: 1 }} /></div>
+      <div>
+        {/* header */}
+        <div style={{ display: "flex", padding: "12px 16px", background: "#f8fafc", color: "#64748b", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".3px" }}>
+          <div style={{ width: 36 }}></div>
+          <div style={{ flex: 2 }}>Nhân viên</div>
+          <div style={{ flex: 1.5 }}>Vị trí</div>
+          <div style={{ width: 90, textAlign: "center" }}>Công việc</div>
+          <div style={{ width: 80, textAlign: "center" }}>Hoàn thành</div>
+        </div>
+        {filtered.length === 0 && <div style={{ padding: 30, textAlign: "center", color: "#94a3b8", fontSize: 14 }}>Không có nhân viên</div>}
+        {filtered.map(({ p, m }) => {
+          const open = expanded[m.id];
+          const done = m.tasks.filter((t) => t.status === "done").length;
+          const pct = m.tasks.length ? Math.round((done / m.tasks.length) * 100) : 0;
+          const hideTasks = !!p.hideTasks;
+          return (
+            <div key={m.id} style={{ borderTop: "1px solid #f1f5f9" }}>
+              {/* hàng nhân viên */}
+              <div onClick={() => !hideTasks && toggle(m.id)} style={{ display: "flex", alignItems: "center", padding: "11px 16px", cursor: hideTasks ? "default" : "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                <div style={{ width: 36, color: "#94a3b8" }}>
+                  {!hideTasks && m.tasks.length > 0 && <span style={{ display: "inline-block", transition: "transform .2s", transform: open ? "rotate(90deg)" : "none", fontSize: 12 }}>▶</span>}
+                </div>
+                <div style={{ flex: 2, display: "flex", alignItems: "center", gap: 10 }}><Avatar m={m} size={32} /><span style={{ fontWeight: 600 }}>{m.name}</span></div>
+                <div style={{ flex: 1.5, color: "#1e40af", fontWeight: 600, fontSize: 13 }}>{p.title}</div>
+                <div style={{ width: 90, textAlign: "center" }}>{hideTasks ? <span style={{ color: "#cbd5e1", fontSize: 12 }}>—</span> : <span style={{ background: "#eff6ff", color: "#1e40af", padding: "2px 9px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{m.tasks.length}</span>}</div>
+                <div style={{ width: 80, textAlign: "center", color: hideTasks ? "#cbd5e1" : "#10b981", fontWeight: 700, fontSize: 13 }}>{hideTasks ? "—" : pct + "%"}</div>
+              </div>
+              {/* công việc xổ ra */}
+              {open && !hideTasks && (
+                <div style={{ background: "#fafcff", padding: "4px 16px 12px 52px" }}>
+                  {m.tasks.length === 0 && <div style={{ color: "#94a3b8", fontSize: 13, padding: 8 }}>Chưa có công việc</div>}
+                  {m.tasks.map((t) => (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: "1px solid #eef2f7", fontSize: 13 }}>
+                      <span style={{ flex: 2, fontWeight: 500 }}>{t.title}</span>
+                      <span style={{ width: 130 }}><Badge status={t.status} /></span>
+                      <span style={{ width: 100, color: "#64748b" }}>{t.deadline || "-"}</span>
+                      <span style={{ width: 90, textAlign: "right" }}>{t.link ? <a href={t.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ color: "#0891b2", fontWeight: 600, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 3 }}><Link2 size={13} /> Theo dõi</a> : <span style={{ color: "#cbd5e1" }}>—</span>}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -607,12 +641,16 @@ function PositionModal({ pos, tiers, onClose, onUpdatePos, onRemovePos, onAddMem
           <button onClick={onClose} style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
         </div>
         <div style={{ padding: 18, overflowY: "auto", flex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "#475569" }}>Cấp phân loại:</span>
             <select value={pos.tierId || ""} onChange={(e) => onUpdatePos({ tierId: e.target.value || null })} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600 }}>
               <option value="">— Chưa phân cấp —</option>
               {(tiers || []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475569", cursor: "pointer", marginLeft: "auto" }}>
+              <input type="checkbox" checked={!!pos.hideTasks} onChange={(e) => onUpdatePos({ hideTasks: e.target.checked })} />
+              Ẩn công việc (cấp lãnh đạo)
+            </label>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Nhân viên ({pos.members.length})</div>
@@ -688,6 +726,7 @@ function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, 
 
         <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
           {/* THỐNG KÊ */}
+          {!m.hideTasks && (<>
           <div style={{ display: "flex", gap: 20, alignItems: "center", padding: 16, background: "#f8fafc", borderRadius: 14, marginBottom: 18 }}>
             <div style={{ position: "relative", width: 110, height: 110, flexShrink: 0 }}>
               <div style={{ width: 110, height: 110, borderRadius: "50%", background: segs ? "conic-gradient(" + segs + ")" : "#e2e8f0" }} />
@@ -724,8 +763,14 @@ function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, 
                 <input type="date" value={t.deadline} onChange={(e) => onUpdateTask(t.id, { deadline: e.target.value })} style={{ padding: "5px 9px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
                 <input value={t.note} placeholder="Ghi chú..." onChange={(e) => onUpdateTask(t.id, { note: e.target.value })} style={{ flex: 1, minWidth: 100, padding: "5px 9px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
               </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <Link2 size={14} color="#94a3b8" />
+                <input value={t.link || ""} placeholder="Đường dẫn theo dõi (https://...)" onChange={(e) => onUpdateTask(t.id, { link: e.target.value })} style={{ flex: 1, padding: "5px 9px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13 }} />
+                {t.link && <a href={t.link} target="_blank" rel="noreferrer" style={{ ...btn("#0891b2"), padding: "5px 10px", textDecoration: "none" }}>Mở →</a>}
+              </div>
             </div>
           ))}
+          </>)}
 
           {/* KẾ HOẠCH */}
           <div style={{ marginTop: 16, padding: 14, background: "#eff6ff", borderRadius: 12, border: "1px solid #dbeafe" }}>
