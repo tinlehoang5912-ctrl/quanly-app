@@ -79,6 +79,21 @@ const seed = {
 
 const STORAGE_KEY = "quanly_congviec_data";
 
+// Màu chủ đạo mặc định + bộ preset
+const DEFAULT_THEME = { dark: "#0369a1", light: "#0891b2" };
+const THEME_PRESETS = [
+  { name: "Xanh dương", dark: "#1e40af", light: "#3b82f6" },
+  { name: "Xanh biển", dark: "#0369a1", light: "#0891b2" },
+  { name: "Xanh lá", dark: "#047857", light: "#10b981" },
+  { name: "Xanh ngọc", dark: "#0f766e", light: "#14b8a6" },
+  { name: "Tím", dark: "#6d28d9", light: "#8b5cf6" },
+  { name: "Hồng sen", dark: "#be185d", light: "#ec4899" },
+  { name: "Cam", dark: "#c2410c", light: "#f97316" },
+  { name: "Đỏ", dark: "#b91c1c", light: "#ef4444" },
+  { name: "Xám than", dark: "#334155", light: "#64748b" },
+  { name: "Đen sang", dark: "#18181b", light: "#3f3f46" },
+];
+
 // Upload ảnh lên Google Drive qua Apps Script, nhận về URL
 async function uploadImage(base64, name) {
   try {
@@ -133,6 +148,7 @@ export default function App() {
   const [data, setData] = useState(loadData);
   const [cloudState, setCloudState] = useState("idle"); // idle | loading | loaded | err
   const [screen, setScreen] = useState("landing"); // landing | app
+  const [showTheme, setShowTheme] = useState(false);
   const [selected, setSelected] = useState(null);
   const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
@@ -142,6 +158,9 @@ export default function App() {
 
   const { orgName, logo, positions, links } = data;
   const tiers = data.tiers || [];
+  const theme = data.theme || DEFAULT_THEME;
+  const grad = "linear-gradient(135deg," + theme.dark + "," + theme.light + ")";
+  const setTheme = (t) => setData((d) => ({ ...d, theme: t }));
   const setPositions = (fn) => setData((d) => ({ ...d, positions: typeof fn === "function" ? fn(d.positions) : fn }));
   const setLinks = (fn) => setData((d) => ({ ...d, links: typeof fn === "function" ? fn(d.links) : fn }));
   const setOrgName = (v) => setData((d) => ({ ...d, orgName: v }));
@@ -242,7 +261,7 @@ export default function App() {
   };
   const exportJSON = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })); a.download = "backup.json"; a.click(); };
   const importJSON = (e) => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.positions) setData({ orgName: d.orgName || "Dự án", logo: d.logo || null, positions: d.positions.map((p) => ({ x: 200, y: 200, ...p })), links: d.links || [] }); } catch { alert("File không hợp lệ"); } }; r.readAsText(f); };
-  const exportReport = () => openReport({ orgName, logo, positions, allTasks, statusCounts, overallPct, allMembers });
+  const exportReport = () => openReport({ orgName, logo, positions, allTasks, statusCounts, overallPct, allMembers, theme });
 
   return (
     <div style={{ fontFamily: "'Inter',system-ui,sans-serif", height: "100vh", overflow: "hidden", color: "#0f172a" }}>
@@ -252,7 +271,7 @@ export default function App() {
         @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
         @keyframes bounceDown{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
-        .landing-hero{background:linear-gradient(120deg,#0c4a6e,#0369a1,#0891b2,#0d9488);background-size:300% 300%;animation:gradientMove 12s ease infinite}
+        .landing-hero{animation:gradientMove 12s ease infinite}
         .blob{position:absolute;border-radius:50%;filter:blur(8px);animation:floatY 7s ease-in-out infinite}
         .fade-up{animation:fadeUp .8s cubic-bezier(.2,.8,.2,1) both}
         .app-tab{transition:all .2s}
@@ -263,7 +282,7 @@ export default function App() {
       <div style={{ height: "200vh", transform: screen === "app" ? "translateY(-100vh)" : "translateY(0)", transition: "transform .7s cubic-bezier(.76,0,.24,1)" }}>
 
         {/* ===== MÀN 1: LANDING full màn hình ===== */}
-        <div className="landing-hero" style={{ position: "relative", height: "100vh", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: "28px", overflow: "hidden", textAlign: "center" }}>
+        <div className="landing-hero" style={{ position: "relative", height: "100vh", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", padding: "28px", overflow: "hidden", textAlign: "center", background: "linear-gradient(120deg," + theme.dark + "," + theme.light + "," + theme.dark + ")", backgroundSize: "300% 300%" }}>
           <div className="blob" style={{ width: 280, height: 280, background: "rgba(255,255,255,.08)", top: "8%", left: "10%" }} />
           <div className="blob" style={{ width: 200, height: 200, background: "rgba(255,255,255,.07)", bottom: "10%", right: "12%", animationDelay: "2s" }} />
           <div className="blob" style={{ width: 120, height: 120, background: "rgba(255,255,255,.06)", top: "30%", right: "28%", animationDelay: "4s" }} />
@@ -274,7 +293,7 @@ export default function App() {
               Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
             </p>
             <div className="fade-up" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", animationDelay: ".2s" }}>
-              <button onClick={() => setScreen("app")} style={{ background: "#fff", color: "#0369a1", border: "none", padding: "16px 36px", borderRadius: 14, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>Vào ứng dụng →</button>
+              <button onClick={() => setScreen("app")} style={{ background: "#fff", color: theme.dark, border: "none", padding: "16px 36px", borderRadius: 14, fontSize: 17, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", boxShadow: "0 10px 30px rgba(0,0,0,.2)" }}>Vào ứng dụng →</button>
               <button onClick={exportReport} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)", padding: "16px 30px", borderRadius: 14, fontSize: 17, fontWeight: 600, cursor: "pointer" }}>Xem báo cáo</button>
             </div>
             <div className="fade-up" style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 50, animationDelay: ".3s" }}>
@@ -294,7 +313,7 @@ export default function App() {
 
         {/* ===== MÀN 2: APP full màn hình ===== */}
         <div style={{ height: "100vh", overflowY: "auto", background: "#f1f5f9" }}>
-        <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(30,64,175,.25)", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ background: grad, padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(15,23,42,.25)", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button onClick={() => setScreen("landing")} title="Quay lại trang giới thiệu" style={{ background: "rgba(255,255,255,.18)", border: "none", borderRadius: 10, width: 38, height: 38, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>↑</button>
           <div onClick={() => logoRef.current.click()} title="Tải logo tổ chức" style={{ height: 52, minWidth: 52, maxWidth: 220, padding: logo ? "4px 8px" : 0, borderRadius: 10, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", border: "1px dashed rgba(255,255,255,.4)" }}>
@@ -313,6 +332,9 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setShowTheme((s) => !s)} style={btn("rgba(255,255,255,.18)")} title="Cá nhân hóa màu chủ đạo">🎨 Cá nhân hóa</button>
+          </div>
           <button onClick={exportReport} style={btn("#10b981")}><FileText size={15} /> Báo cáo HTML</button>
           <button onClick={() => syncToSheet()} style={btn(syncState === "ok" ? "#10b981" : syncState === "err" ? "#ef4444" : "rgba(255,255,255,.18)")}>
             <RefreshCw size={15} style={{ animation: syncState === "syncing" ? "spin 1s linear infinite" : "none" }} />
@@ -330,7 +352,7 @@ export default function App() {
 
       <div style={{ display: "flex", gap: 4, padding: "14px 28px 0", background: "#fff", borderBottom: "1px solid #e2e8f0" }}>
         {[{ k: "org", label: "Sơ đồ tổ chức", icon: Network }, { k: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { k: "data", label: "Bảng dữ liệu", icon: Table2 }].map((t) => (
-          <button key={t.k} className="app-tab" onClick={() => setView(t.k)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "12px 20px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, color: view === t.k ? "#0369a1" : "#64748b", borderBottom: view === t.k ? "3px solid #0891b2" : "3px solid transparent", marginBottom: -1, borderRadius: "8px 8px 0 0" }}>
+          <button key={t.k} className="app-tab" onClick={() => setView(t.k)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "12px 20px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, color: view === t.k ? theme.dark : "#64748b", borderBottom: view === t.k ? "3px solid " + theme.light : "3px solid transparent", marginBottom: -1, borderRadius: "8px 8px 0 0" }}>
             <t.icon size={17} /> {t.label}
           </button>
         ))}
@@ -356,6 +378,31 @@ export default function App() {
           onUpdateTask={(tId, patch) => updateTask(selMember.posId, selMember.memberId, tId, patch)}
           onRemoveTask={(tId) => removeTask(selMember.posId, selMember.memberId, tId)}
           onReport={(mem) => openMemberReport({ member: mem, posTitle: selMemberData.posTitle })} />
+      )}
+
+      {showTheme && (
+        <>
+          <div onClick={() => setShowTheme(false)} style={{ position: "fixed", inset: 0, zIndex: 9998 }} />
+          <div style={{ position: "fixed", top: 70, right: 16, background: "#fff", borderRadius: 14, boxShadow: "0 12px 40px rgba(0,0,0,.25)", padding: 16, width: 280, maxWidth: "calc(100vw - 32px)", maxHeight: "calc(100vh - 120px)", overflowY: "auto", zIndex: 9999, color: "#0f172a" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12 }}>Cá nhân hóa màu chủ đạo</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 8, marginBottom: 14 }}>
+              {THEME_PRESETS.map((p) => (
+                <div key={p.name} onClick={() => setTheme({ dark: p.dark, light: p.light })} title={p.name} style={{ height: 34, borderRadius: 9, cursor: "pointer", background: "linear-gradient(135deg," + p.dark + "," + p.light + ")", border: (theme.dark === p.dark && theme.light === p.light) ? "3px solid #0f172a" : "2px solid #fff", boxShadow: "0 1px 4px rgba(0,0,0,.15)" }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Hoặc tự chọn:</div>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b" }}>
+                Đậm<input type="color" value={theme.dark} onChange={(e) => setTheme({ ...theme, dark: e.target.value })} style={{ width: 44, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }} />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, fontSize: 11, color: "#64748b" }}>
+                Nhạt<input type="color" value={theme.light} onChange={(e) => setTheme({ ...theme, light: e.target.value })} style={{ width: 44, height: 36, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }} />
+              </label>
+              <div style={{ flex: 1, height: 36, borderRadius: 8, background: grad }} />
+            </div>
+            <button onClick={() => setTheme(DEFAULT_THEME)} style={{ marginTop: 12, width: "100%", padding: "7px", borderRadius: 8, border: "1px solid #e2e8f0", background: "#f8fafc", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#64748b" }}>Khôi phục mặc định</button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -806,7 +853,9 @@ function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, 
 }
 
 // ============ REPORT: TỔNG ============
-function openReport({ orgName, logo, positions, allTasks, statusCounts, overallPct, allMembers }) {
+function openReport({ orgName, logo, positions, allTasks, statusCounts, overallPct, allMembers, theme }) {
+  const TD = (theme && theme.dark) || "#0369a1";
+  const TL = (theme && theme.light) || "#0891b2";
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const today = new Date().toLocaleDateString("vi-VN");
   let acc = 0; const segs = STATUS_KEYS.map((k) => { const v = statusCounts[k]; const pctv = allTasks.length ? (v / allTasks.length) * 100 : 0; const seg = STATUS[k].color + " " + acc + "% " + (acc + pctv) + "%"; acc += pctv; return v > 0 ? seg : null; }).filter(Boolean).join(",");
@@ -824,7 +873,7 @@ function openReport({ orgName, logo, positions, allTasks, statusCounts, overallP
     + 'h1,h2,h3,.num,.kpi-v{font-family:"Plus Jakarta Sans",sans-serif}'
     + '.wrap{max-width:920px;margin:0 auto}'
     + '.card-bg{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(15,23,42,.06);overflow:hidden;margin-bottom:18px}'
-    + '.head{position:relative;background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 55%,#0891b2 100%);color:#fff;padding:34px 32px;overflow:hidden}'
+    + '.head{position:relative;background:linear-gradient(135deg,' + TD + ' 0%,' + TL + ' 100%);color:#fff;padding:34px 32px;overflow:hidden}'
     + '.head::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.08)}'
     + '.head::before{content:"";position:absolute;right:60px;bottom:-90px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}'
     + '.head .row{position:relative;display:flex;align-items:center;gap:18px;z-index:1}'
