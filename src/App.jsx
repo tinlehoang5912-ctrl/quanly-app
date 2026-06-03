@@ -197,6 +197,47 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "'Inter',system-ui,sans-serif", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+        @keyframes gradientMove{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        .landing-hero{background:linear-gradient(120deg,#0c4a6e,#0369a1,#0891b2,#0d9488);background-size:300% 300%;animation:gradientMove 12s ease infinite}
+        .blob{position:absolute;border-radius:50%;filter:blur(8px);animation:floatY 7s ease-in-out infinite}
+        .fade-up{animation:fadeUp .8s cubic-bezier(.2,.8,.2,1) both}
+        .app-tab{transition:all .2s}
+        .app-tab:hover{background:#f1f5f9!important}
+      `}</style>
+
+      {/* ===== LANDING ngắn phía trên ===== */}
+      <div className="landing-hero" style={{ position: "relative", color: "#fff", padding: "70px 28px 80px", overflow: "hidden", textAlign: "center" }}>
+        <div className="blob" style={{ width: 200, height: 200, background: "rgba(255,255,255,.08)", top: -40, left: "12%" }} />
+        <div className="blob" style={{ width: 150, height: 150, background: "rgba(255,255,255,.07)", bottom: -30, right: "15%", animationDelay: "2s" }} />
+        <div className="blob" style={{ width: 90, height: 90, background: "rgba(255,255,255,.06)", top: "40%", right: "30%", animationDelay: "4s" }} />
+        <div style={{ position: "relative", maxWidth: 760, margin: "0 auto" }}>
+          {logo && <img src={logo} alt="logo" className="fade-up" style={{ width: 64, height: 64, borderRadius: 16, objectFit: "cover", background: "#fff", padding: 4, marginBottom: 18 }} />}
+          <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 44, fontWeight: 800, letterSpacing: "-1px", lineHeight: 1.1, marginBottom: 14 }}>{orgName}</h1>
+          <p className="fade-up" style={{ fontSize: 17, color: "#bae6fd", maxWidth: 540, margin: "0 auto 28px", animationDelay: ".1s", lineHeight: 1.6 }}>
+            Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
+          </p>
+          <div className="fade-up" style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap", animationDelay: ".2s" }}>
+            <button onClick={() => document.getElementById("app-section").scrollIntoView({ behavior: "smooth" })} style={{ background: "#fff", color: "#0369a1", border: "none", padding: "14px 30px", borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: "pointer", fontFamily: "'Plus Jakarta Sans',sans-serif", boxShadow: "0 8px 24px rgba(0,0,0,.18)" }}>Vào ứng dụng →</button>
+            <button onClick={exportReport} style={{ background: "rgba(255,255,255,.15)", color: "#fff", border: "1px solid rgba(255,255,255,.35)", padding: "14px 26px", borderRadius: 12, fontSize: 16, fontWeight: 600, cursor: "pointer" }}>Xem báo cáo</button>
+          </div>
+          {/* 3 điểm nổi bật */}
+          <div className="fade-up" style={{ display: "flex", gap: 18, justifyContent: "center", flexWrap: "wrap", marginTop: 44, animationDelay: ".3s" }}>
+            {[{ icon: Network, t: "Sơ đồ kéo-thả", d: "Thiết kế tổ chức trực quan" }, { icon: LayoutDashboard, t: "Dashboard", d: "Thống kê thời gian thực" }, { icon: Cloud, t: "Đồng bộ cloud", d: "Truy cập mọi thiết bị" }].map((f, i) => (
+              <div key={i} style={{ background: "rgba(255,255,255,.1)", backdropFilter: "blur(6px)", border: "1px solid rgba(255,255,255,.18)", borderRadius: 16, padding: "18px 22px", width: 200, textAlign: "left" }}>
+                <f.icon size={24} color="#fff" />
+                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 10 }}>{f.t}</div>
+                <div style={{ fontSize: 12, color: "#bae6fd", marginTop: 3 }}>{f.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="app-section" />
       <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", boxShadow: "0 4px 20px rgba(30,64,175,.25)", flexWrap: "wrap", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div onClick={() => logoRef.current.click()} title="Tải logo tổ chức" style={{ width: 46, height: 46, borderRadius: 10, background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", overflow: "hidden", border: "1px dashed rgba(255,255,255,.4)" }}>
@@ -231,7 +272,7 @@ export default function App() {
 
       <div style={{ display: "flex", gap: 4, padding: "14px 28px 0", background: "#fff", borderBottom: "1px solid #e2e8f0" }}>
         {[{ k: "org", label: "Sơ đồ tổ chức", icon: Network }, { k: "dashboard", label: "Dashboard", icon: LayoutDashboard }, { k: "data", label: "Bảng dữ liệu", icon: Table2 }].map((t) => (
-          <button key={t.k} onClick={() => setView(t.k)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "10px 18px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, color: view === t.k ? "#1e40af" : "#64748b", borderBottom: view === t.k ? "3px solid #3b82f6" : "3px solid transparent", marginBottom: -1 }}>
+          <button key={t.k} className="app-tab" onClick={() => setView(t.k)} style={{ display: "flex", alignItems: "center", gap: 7, padding: "12px 20px", border: "none", background: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, color: view === t.k ? "#0369a1" : "#64748b", borderBottom: view === t.k ? "3px solid #0891b2" : "3px solid transparent", marginBottom: -1, borderRadius: "8px 8px 0 0" }}>
             <t.icon size={17} /> {t.label}
           </button>
         ))}
@@ -349,7 +390,7 @@ function OrgCanvas({ positions, links, tiers, onSelect, onSelectMember, onAdd, o
       )}
 
       <div ref={canvasRef} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onClick={() => setSelLink(null)}
-        style={{ position: "relative", height: "calc(100vh - 230px)", overflow: "auto", background: "radial-gradient(#dde4ee 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+        style={{ position: "relative", height: "calc(100vh - 230px)", overflow: "auto", background: "radial-gradient(#cbd9ec 1.2px, transparent 1.2px), linear-gradient(180deg,#f8fafc,#eef2f9)", backgroundSize: "24px 24px, 100% 100%" }}>
         {/* SVG đường nối */}
         <svg style={{ position: "absolute", top: 0, left: 0, width: 2400, height: 1600, pointerEvents: "none" }}>
           <defs>
@@ -655,13 +696,87 @@ function openReport({ orgName, logo, positions, allTasks, statusCounts, overallP
   const today = new Date().toLocaleDateString("vi-VN");
   let acc = 0; const segs = STATUS_KEYS.map((k) => { const v = statusCounts[k]; const pctv = allTasks.length ? (v / allTasks.length) * 100 : 0; const seg = STATUS[k].color + " " + acc + "% " + (acc + pctv) + "%"; acc += pctv; return v > 0 ? seg : null; }).filter(Boolean).join(",");
   const maxTasks = Math.max(1, ...positions.map((p) => p.members.flatMap((m) => m.tasks).length));
-  const bars = positions.map((p) => { const tot = p.members.flatMap((m) => m.tasks).length; const dn = p.members.flatMap((m) => m.tasks).filter((t) => t.status === "done").length; return '<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>' + esc(p.title) + '</span><span style="color:#64748b">' + dn + '/' + tot + '</span></div><div style="height:22px;background:#eef2f7;border-radius:6px;overflow:hidden"><div style="height:100%;width:' + ((tot / maxTasks) * 100) + '%;background:#3b82f6;display:flex;align-items:center"><div style="height:100%;width:' + (tot ? (dn / tot) * 100 : 0) + '%;background:#10b981"></div></div></div></div>'; }).join("");
+  const bars = positions.map((p) => { const tot = p.members.flatMap((m) => m.tasks).length; const dn = p.members.flatMap((m) => m.tasks).filter((t) => t.status === "done").length; const rate = tot ? Math.round((dn / tot) * 100) : 0; return '<div class="bar-row"><div class="bar-head"><span class="bar-name">' + esc(p.title) + '</span><span class="bar-num">' + dn + '/' + tot + ' • ' + rate + '%</span></div><div class="bar-track"><div class="bar-total" style="width:' + ((tot / maxTasks) * 100) + '%"><div class="bar-done" style="width:' + (tot ? (dn / tot) * 100 : 0) + '%"></div></div></div></div>'; }).join("");
   const todayD = new Date(); todayD.setHours(0, 0, 0, 0);
   const upcoming = allTasks.filter((t) => t.deadline && t.status !== "done").map((t) => ({ ...t, d: new Date(t.deadline) })).filter((t) => !isNaN(t.d)).sort((a, b) => a.d - b.d).slice(0, 12);
-  const timeline = upcoming.length ? upcoming.map((t) => { const days = Math.ceil((t.d - todayD) / 86400000); const overdue = days < 0; const soon = days >= 0 && days <= 2; const c = overdue ? "#ef4444" : soon ? "#f59e0b" : "#3b82f6"; const lbl = overdue ? ("Trễ " + (-days) + " ngày") : days === 0 ? "Hôm nay" : ("Còn " + days + " ngày"); return '<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9"><div style="width:10px;height:10px;border-radius:50%;background:' + c + ';flex-shrink:0"></div><div style="flex:1"><div style="font-weight:600;font-size:13px">' + esc(t.title) + '</div><div style="font-size:11px;color:#64748b">' + esc(t.owner) + " • " + esc(t.posTitle) + '</div></div><div style="text-align:right"><div style="font-size:12px;color:' + c + ';font-weight:700">' + lbl + '</div><div style="font-size:11px;color:#94a3b8">' + esc(t.deadline) + '</div></div></div>'; }).join("") : '<div style="color:#94a3b8;padding:14px;text-align:center">Không có deadline sắp tới</div>';
-  const legend = STATUS_KEYS.filter((k) => statusCounts[k] > 0).map((k) => '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px"><span style="width:10px;height:10px;border-radius:2px;background:' + STATUS[k].color + '"></span>' + STATUS[k].label + ' (' + statusCounts[k] + ')</span>').join("");
-  const tableRows = positions.map((p) => p.members.map((m) => m.tasks.length ? m.tasks.map((t, i) => '<tr><td>' + (i === 0 ? esc(p.title) : "") + '</td><td>' + (i === 0 ? esc(m.name) : "") + '</td><td>' + esc(t.title) + '</td><td><span style="background:' + STATUS[t.status].color + '22;color:' + STATUS[t.status].color + ';padding:2px 8px;border-radius:10px;font-size:12px;font-weight:600">' + STATUS[t.status].label + '</span></td><td>' + esc(t.deadline) + '</td><td>' + esc(t.note) + '</td></tr>').join("") : '<tr><td>' + esc(p.title) + '</td><td>' + esc(m.name) + '</td><td colspan="4" style="color:#cbd5e1">— chưa có việc —</td></tr>').join("")).join("");
-  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo - ' + esc(orgName) + '</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}body{background:#f1f5f9;color:#0f172a;padding:30px}.wrap{max-width:900px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,.08)}.head{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:28px;display:flex;align-items:center;gap:18px}.head img{width:64px;height:64px;border-radius:12px;object-fit:cover;background:#fff}.head h1{font-size:24px}.head p{color:#bfdbfe;font-size:13px;margin-top:4px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:24px}.card{border:1px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center}.card .v{font-size:28px;font-weight:800}.card .l{font-size:12px;color:#64748b;margin-top:3px}.sec{padding:0 24px 24px}.sec h2{font-size:16px;margin-bottom:14px;color:#1e40af}.grid2{display:grid;grid-template-columns:240px 1fr;gap:24px;align-items:center}.donut{width:200px;height:200px;border-radius:50%;margin:0 auto}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f8fafc;text-align:left;padding:10px;color:#64748b;font-size:11px;text-transform:uppercase}td{padding:10px;border-top:1px solid #f1f5f9;vertical-align:top}.btn{position:fixed;top:20px;right:20px;background:#1e40af;color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(30,64,175,.3)}.prog{height:18px;background:#e2e8f0;border-radius:20px;overflow:hidden}.prog>div{height:100%;background:linear-gradient(90deg,#3b82f6,#10b981);border-radius:20px}@media print{.btn{display:none}body{padding:0;background:#fff}.wrap{box-shadow:none}}</style></head><body><button class="btn" onclick="window.print()">In / Lưu PDF</button><div class="wrap"><div class="head">' + (logo ? '<img src="' + logo + '" alt="logo">' : "") + '<div><h1>' + esc(orgName) + '</h1><p>Báo cáo tiến độ công việc • ' + today + '</p></div></div><div class="cards"><div class="card"><div class="v" style="color:#3b82f6">' + positions.length + '</div><div class="l">Vị trí</div></div><div class="card"><div class="v" style="color:#8b5cf6">' + allMembers.length + '</div><div class="l">Nhân viên</div></div><div class="card"><div class="v" style="color:#10b981">' + statusCounts.done + '</div><div class="l">Hoàn thành</div></div><div class="card"><div class="v" style="color:#ef4444">' + statusCounts.overdue + '</div><div class="l">Quá hạn</div></div></div><div class="sec"><h2>Tiến độ tổng thể: ' + overallPct + '%</h2><div class="prog"><div style="width:' + overallPct + '%"></div></div></div><div class="sec"><h2>Cơ cấu trạng thái</h2><div class="grid2"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div>' + (legend || '<span style="color:#94a3b8">Chưa có dữ liệu</span>') + '</div></div></div><div class="sec"><h2>Khối lượng theo vị trí</h2>' + bars + '</div><div class="sec"><h2>Deadline sắp tới</h2>' + timeline + '</div><div class="sec"><h2>Chi tiết công việc</h2><table><thead><tr><th>Vị trí</th><th>Nhân viên</th><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + (tableRows || '<tr><td colspan="6" style="text-align:center;color:#94a3b8">Chưa có dữ liệu</td></tr>') + '</tbody></table></div></div></body></html>';
+  const timeline = upcoming.length ? upcoming.map((t) => { const days = Math.ceil((t.d - todayD) / 86400000); const overdue = days < 0; const soon = days >= 0 && days <= 2; const c = overdue ? "#ef4444" : soon ? "#f59e0b" : "#3b82f6"; const lbl = overdue ? ("Trễ " + (-days) + " ngày") : days === 0 ? "Hôm nay" : ("Còn " + days + " ngày"); return '<div class="tl-row"><div class="tl-dot" style="background:' + c + '"></div><div style="flex:1"><div class="tl-title">' + esc(t.title) + '</div><div class="tl-sub">' + esc(t.owner) + " • " + esc(t.posTitle) + '</div></div><div style="text-align:right"><div class="tl-badge" style="color:' + c + ';background:' + c + '15">' + lbl + '</div><div class="tl-date">' + esc(t.deadline) + '</div></div></div>'; }).join("") : '<div class="empty">Không có deadline sắp tới</div>';
+  const legend = STATUS_KEYS.filter((k) => statusCounts[k] > 0).map((k) => '<div class="lg-item"><span class="lg-dot" style="background:' + STATUS[k].color + '"></span><span class="lg-label">' + STATUS[k].label + '</span><span class="lg-count">' + statusCounts[k] + '</span></div>').join("");
+  const tableRows = positions.map((p) => p.members.map((m) => m.tasks.length ? m.tasks.map((t, i) => '<tr><td>' + (i === 0 ? esc(p.title) : "") + '</td><td>' + (i === 0 ? esc(m.name) : "") + '</td><td>' + esc(t.title) + '</td><td><span class="pill" style="background:' + STATUS[t.status].color + '1a;color:' + STATUS[t.status].color + '">' + STATUS[t.status].label + '</span></td><td>' + esc(t.deadline) + '</td><td>' + esc(t.note) + '</td></tr>').join("") : '<tr><td>' + esc(p.title) + '</td><td>' + esc(m.name) + '</td><td colspan="4" class="muted">— chưa có việc —</td></tr>').join("")).join("");
+
+  const css = '@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap");'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:"Inter",system-ui,sans-serif;background:#eef2f9;color:#0f172a;padding:32px 16px}'
+    + 'h1,h2,h3,.num,.kpi-v{font-family:"Plus Jakarta Sans",sans-serif}'
+    + '.wrap{max-width:920px;margin:0 auto}'
+    + '.card-bg{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(15,23,42,.06);overflow:hidden;margin-bottom:18px}'
+    + '.head{position:relative;background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 55%,#0891b2 100%);color:#fff;padding:34px 32px;overflow:hidden}'
+    + '.head::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.08)}'
+    + '.head::before{content:"";position:absolute;right:60px;bottom:-90px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}'
+    + '.head .row{position:relative;display:flex;align-items:center;gap:18px;z-index:1}'
+    + '.head img{width:66px;height:66px;border-radius:16px;object-fit:cover;background:#fff;padding:4px}'
+    + '.head h1{font-size:28px;font-weight:800;letter-spacing:-.5px}'
+    + '.head p{color:#bae6fd;font-size:13px;margin-top:5px}'
+    + '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:24px}'
+    + '.kpi{position:relative;border-radius:16px;padding:20px 18px;background:#fff;border:1px solid #eef2f7;overflow:hidden;transition:transform .2s,box-shadow .2s}'
+    + '.kpi:hover{transform:translateY(-4px);box-shadow:0 10px 26px rgba(15,23,42,.1)}'
+    + '.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}'
+    + '.kpi-v{font-size:34px;font-weight:800;color:var(--c);line-height:1}'
+    + '.kpi-l{font-size:12px;color:#64748b;margin-top:6px;font-weight:500}'
+    + '.sec{padding:8px 28px 26px}.sec h2{font-size:17px;font-weight:700;margin-bottom:16px;color:#0f172a;display:flex;align-items:center;gap:9px}'
+    + '.sec h2::before{content:"";width:5px;height:18px;border-radius:3px;background:linear-gradient(#0369a1,#0891b2)}'
+    + '.prog-wrap{display:flex;align-items:center;gap:18px}'
+    + '.prog-pct{font-size:40px;font-weight:800;font-family:"Plus Jakarta Sans";background:linear-gradient(90deg,#0369a1,#059669);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}'
+    + '.prog{flex:1;height:20px;background:#e8eef6;border-radius:30px;overflow:hidden}'
+    + '.prog>div{height:100%;border-radius:30px;background:linear-gradient(90deg,#0369a1,#0891b2,#059669);animation:grow 1.1s cubic-bezier(.2,.8,.2,1)}'
+    + '@keyframes grow{from{width:0}}'
+    + '.grid2{display:grid;grid-template-columns:230px 1fr;gap:30px;align-items:center}'
+    + '.donut-wrap{position:relative;width:200px;height:200px;margin:0 auto}'
+    + '.donut{width:200px;height:200px;border-radius:50%}'
+    + '.donut-hole{position:absolute;inset:32px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 2px 8px rgba(0,0,0,.04)}'
+    + '.donut-hole .n{font-size:30px;font-weight:800;font-family:"Plus Jakarta Sans";color:#0f172a}'
+    + '.donut-hole .t{font-size:11px;color:#94a3b8}'
+    + '.legend{display:flex;flex-direction:column;gap:10px}'
+    + '.lg-item{display:flex;align-items:center;gap:10px;font-size:13px}'
+    + '.lg-dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}'
+    + '.lg-label{flex:1;color:#475569;font-weight:500}.lg-count{font-weight:700;color:#0f172a}'
+    + '.bar-row{margin:12px 0}'
+    + '.bar-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}'
+    + '.bar-name{font-weight:600}.bar-num{color:#64748b;font-weight:600}'
+    + '.bar-track{height:24px;background:#eef2f7;border-radius:8px;overflow:hidden}'
+    + '.bar-total{height:100%;background:#7dd3fc;display:flex;align-items:center;border-radius:8px;transition:width .8s}'
+    + '.bar-done{height:100%;background:linear-gradient(90deg,#059669,#34d399)}'
+    + '.tl-row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #f1f5f9}'
+    + '.tl-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 4px rgba(0,0,0,.04)}'
+    + '.tl-title{font-weight:600;font-size:13px}.tl-sub{font-size:11px;color:#94a3b8;margin-top:2px}'
+    + '.tl-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}'
+    + '.tl-date{font-size:11px;color:#94a3b8;margin-top:3px}'
+    + 'table{width:100%;border-collapse:collapse;font-size:13px}'
+    + 'th{background:#f1f6fc;text-align:left;padding:11px 12px;color:#475569;font-size:11px;text-transform:uppercase;font-weight:700;letter-spacing:.4px}'
+    + 'td{padding:11px 12px;border-top:1px solid #f1f5f9;vertical-align:top}'
+    + 'tr:hover td{background:#f8fafc}'
+    + '.pill{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}'
+    + '.muted{color:#cbd5e1}.empty{color:#94a3b8;padding:16px;text-align:center;font-size:13px}'
+    + '.btn{position:fixed;top:22px;right:22px;background:linear-gradient(135deg,#0369a1,#0891b2);color:#fff;border:none;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(3,105,161,.35);font-family:"Plus Jakarta Sans"}'
+    + '.btn:hover{transform:translateY(-2px)}'
+    + '@media print{.btn{display:none}body{padding:0;background:#fff}.card-bg{box-shadow:none;border:1px solid #e2e8f0}.kpi:hover{transform:none}}'
+    + '@media(max-width:640px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}';
+
+  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Báo cáo - ' + esc(orgName) + '</title><style>' + css + '</style></head><body>'
+    + '<button class="btn" onclick="window.print()">⬇ In / Lưu PDF</button>'
+    + '<div class="wrap">'
+    + '<div class="card-bg"><div class="head"><div class="row">' + (logo ? '<img src="' + logo + '" alt="logo">' : "") + '<div><h1>' + esc(orgName) + '</h1><p>Báo cáo tiến độ công việc • ' + today + '</p></div></div></div>'
+    + '<div class="kpis">'
+    + '<div class="kpi" style="--c:#0369a1"><div class="kpi-v">' + positions.length + '</div><div class="kpi-l">Vị trí</div></div>'
+    + '<div class="kpi" style="--c:#0891b2"><div class="kpi-v">' + allMembers.length + '</div><div class="kpi-l">Nhân viên</div></div>'
+    + '<div class="kpi" style="--c:#059669"><div class="kpi-v">' + statusCounts.done + '</div><div class="kpi-l">Hoàn thành</div></div>'
+    + '<div class="kpi" style="--c:#ef4444"><div class="kpi-v">' + statusCounts.overdue + '</div><div class="kpi-l">Quá hạn</div></div>'
+    + '</div></div>'
+    + '<div class="card-bg"><div class="sec" style="padding-top:24px"><h2>Tiến độ tổng thể</h2><div class="prog-wrap"><div class="prog-pct">' + overallPct + '%</div><div class="prog"><div style="width:' + overallPct + '%"></div></div></div></div>'
+    + '<div class="sec"><h2>Cơ cấu trạng thái</h2><div class="grid2"><div class="donut-wrap"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div class="donut-hole"><div class="n">' + allTasks.length + '</div><div class="t">công việc</div></div></div><div class="legend">' + (legend || '<span class="muted">Chưa có dữ liệu</span>') + '</div></div></div></div>'
+    + '<div class="card-bg"><div class="sec" style="padding-top:24px"><h2>Khối lượng theo vị trí</h2>' + bars + '</div></div>'
+    + '<div class="card-bg"><div class="sec" style="padding-top:24px"><h2>Deadline sắp tới</h2>' + timeline + '</div></div>'
+    + '<div class="card-bg"><div class="sec" style="padding-top:24px"><h2>Chi tiết công việc</h2><table><thead><tr><th>Vị trí</th><th>Nhân viên</th><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + (tableRows || '<tr><td colspan="6" class="empty">Chưa có dữ liệu</td></tr>') + '</tbody></table></div></div>'
+    + '</div></body></html>';
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } else { window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank"); }
 }
 
@@ -684,7 +799,58 @@ function openMemberReport({ member, posTitle, orgName, logo }) {
   const issueAuto = autoIssues.length ? autoIssues.map((t) => '<div style="display:flex;gap:8px;align-items:center;padding:5px 0;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:' + STATUS[t.status].color + '"></span><span style="flex:1;font-weight:600">' + esc(t.title) + '</span><span style="color:' + STATUS[t.status].color + ';font-weight:600;font-size:12px">' + STATUS[t.status].label + '</span></div>').join("") : '';
   const issueNote = m.issue ? '<div style="margin-top:8px;padding:12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca;font-size:13px;white-space:pre-wrap">' + esc(m.issue) + '</div>' : '';
   const issueSection = (autoIssues.length || m.issue) ? ('<div class="sec"><h2 style="color:#dc2626">Vướng mắc</h2>' + issueAuto + issueNote + '</div>') : '<div class="sec"><h2 style="color:#dc2626">Vướng mắc</h2><div style="color:#94a3b8;font-size:13px">Không có vướng mắc</div></div>';
-  const avatarHtml = m.avatar ? '<img src="' + m.avatar + '" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #fff">' : '<div style="width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#fff">' + esc((m.name || "?").split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase()) + '</div>';
-  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Báo cáo - ' + esc(m.name) + '</title><style>*{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI",system-ui,sans-serif}body{background:#f1f5f9;color:#0f172a;padding:30px}.wrap{max-width:780px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 30px rgba(0,0,0,.08)}.head{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;padding:28px;display:flex;align-items:center;gap:20px}.head h1{font-size:24px}.head .role{color:#bfdbfe;font-size:14px;margin-top:3px}.head .contact{color:#dbeafe;font-size:12px;margin-top:6px}.pctbox{margin-left:auto;text-align:center}.pctbox .big{font-size:38px;font-weight:800}.pctbox .sm{font-size:11px;color:#bfdbfe}.sec{padding:0 26px 22px}.sec:first-of-type{padding-top:22px}.sec h2{font-size:15px;margin-bottom:12px;color:#1e40af}.grid2{display:grid;grid-template-columns:180px 1fr;gap:22px;align-items:center}.donut{width:160px;height:160px;border-radius:50%;margin:0 auto}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f8fafc;text-align:left;padding:9px;color:#64748b;font-size:11px;text-transform:uppercase}td{padding:9px;border-top:1px solid #f1f5f9;vertical-align:top}.btn{position:fixed;top:20px;right:20px;background:#1e40af;color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;box-shadow:0 4px 16px rgba(30,64,175,.3)}@media print{.btn{display:none}body{padding:0;background:#fff}.wrap{box-shadow:none}}</style></head><body><button class="btn" onclick="window.print()">In / Lưu PDF</button><div class="wrap"><div class="head">' + avatarHtml + '<div><h1>' + esc(m.name) + '</h1><div class="role">' + esc(posTitle || "") + '</div><div class="contact">' + esc(m.email) + ' • ' + esc(m.phone) + '</div></div><div class="pctbox"><div class="big">' + pct + '%</div><div class="sm">hoàn thành • ' + total + ' việc</div></div></div><div class="sec"><h2>Tổng quan trạng thái</h2><div class="grid2"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div>' + (legend || '<span style="color:#94a3b8">Chưa có dữ liệu</span>') + '</div></div></div><div class="sec"><h2>Danh sách công việc</h2><table><thead><tr><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + rows + '</tbody></table></div><div class="sec"><h2>Kế hoạch tuần tiếp theo</h2>' + planTasks + planNote + '</div>' + issueSection + '<div class="sec" style="color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #f1f5f9;padding-top:14px">Xuất ngày ' + today + '</div></div></body></html>';
+  const avatarHtml = m.avatar ? '<img src="' + m.avatar + '" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:4px solid rgba(255,255,255,.4)">' : '<div style="width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:#fff;font-family:Plus Jakarta Sans">' + esc((m.name || "?").split(" ").map((w) => w[0]).slice(-2).join("").toUpperCase()) + '</div>';
+
+  const css = '@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap");'
+    + '*{box-sizing:border-box;margin:0;padding:0}'
+    + 'body{font-family:"Inter",system-ui,sans-serif;background:#eef2f9;color:#0f172a;padding:32px 16px}'
+    + 'h1,h2,.n{font-family:"Plus Jakarta Sans",sans-serif}'
+    + '.wrap{max-width:800px;margin:0 auto;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 6px 30px rgba(15,23,42,.08)}'
+    + '.head{position:relative;background:linear-gradient(135deg,#0c4a6e,#0369a1 60%,#0891b2);color:#fff;padding:30px;display:flex;align-items:center;gap:22px;overflow:hidden}'
+    + '.head::after{content:"";position:absolute;right:-50px;top:-50px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.08)}'
+    + '.head>*{position:relative;z-index:1}'
+    + '.head h1{font-size:26px;font-weight:800}.head .role{color:#bae6fd;font-size:14px;margin-top:3px}.head .contact{color:#e0f2fe;font-size:12px;margin-top:7px}'
+    + '.pctbox{margin-left:auto;text-align:center}.pctbox .big{font-size:42px;font-weight:800;font-family:Plus Jakarta Sans}.pctbox .sm{font-size:11px;color:#bae6fd}'
+    + '.sec{padding:22px 28px}.sec+.sec{padding-top:0}.sec h2{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:9px}'
+    + '.sec h2::before{content:"";width:5px;height:17px;border-radius:3px;background:linear-gradient(#0369a1,#0891b2)}'
+    + '.grid2{display:grid;grid-template-columns:200px 1fr;gap:26px;align-items:center}'
+    + '.donut-wrap{position:relative;width:170px;height:170px;margin:0 auto}'
+    + '.donut{width:170px;height:170px;border-radius:50%}'
+    + '.donut-hole{position:absolute;inset:28px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center}'
+    + '.donut-hole .n{font-size:26px;font-weight:800;color:#0369a1}.donut-hole .t{font-size:10px;color:#94a3b8}'
+    + '.legend{display:flex;flex-direction:column;gap:9px}'
+    + '.lg{display:flex;align-items:center;gap:9px;font-size:13px}.lg-dot{width:11px;height:11px;border-radius:4px}.lg-l{flex:1;color:#475569;font-weight:500}.lg-c{font-weight:700}'
+    + 'table{width:100%;border-collapse:collapse;font-size:13px}'
+    + 'th{background:#f1f6fc;text-align:left;padding:10px;color:#475569;font-size:11px;text-transform:uppercase;font-weight:700}'
+    + 'td{padding:10px;border-top:1px solid #f1f5f9;vertical-align:top}tr:hover td{background:#f8fafc}'
+    + '.pill{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}'
+    + '.plan-card{padding:14px;background:#eff6ff;border-radius:12px;border:1px solid #dbeafe}'
+    + '.tl{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #f1f5f9}'
+    + '.tl-dot{width:9px;height:9px;border-radius:50%;background:#0369a1}'
+    + '.note-box{margin-top:10px;padding:12px;border-radius:10px;font-size:13px;white-space:pre-wrap}'
+    + '.issue-card{padding:14px;background:#fef2f2;border-radius:12px;border:1px solid #fecaca}'
+    + '.muted{color:#94a3b8;font-size:13px}'
+    + '.btn{position:fixed;top:22px;right:22px;background:linear-gradient(135deg,#0369a1,#0891b2);color:#fff;border:none;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(3,105,161,.35);font-family:Plus Jakarta Sans}'
+    + '.foot{color:#94a3b8;font-size:12px;text-align:center;border-top:1px solid #f1f5f9;padding:16px}'
+    + '@media print{.btn{display:none}body{padding:0;background:#fff}.wrap{box-shadow:none}}'
+    + '@media(max-width:640px){.grid2{grid-template-columns:1fr}.head{flex-wrap:wrap}.pctbox{margin:0}}';
+
+  const legend2 = STATUS_KEYS.filter((k) => cnt[k] > 0).map((k) => '<div class="lg"><span class="lg-dot" style="background:' + STATUS[k].color + '"></span><span class="lg-l">' + STATUS[k].label + '</span><span class="lg-c">' + cnt[k] + '</span></div>').join("");
+  const rows2 = m.tasks.length ? m.tasks.map((t) => '<tr><td>' + esc(t.title) + '</td><td><span class="pill" style="background:' + STATUS[t.status].color + '1a;color:' + STATUS[t.status].color + '">' + STATUS[t.status].label + '</span></td><td>' + esc(t.deadline) + '</td><td>' + esc(t.note) + '</td></tr>').join("") : '<tr><td colspan="4" style="text-align:center" class="muted">Chưa có công việc</td></tr>';
+  const planTasks2 = next7.length ? next7.map((t) => { const days = Math.ceil((t.d - todayD) / 86400000); const lbl = days === 0 ? "Hôm nay" : ("Còn " + days + " ngày"); return '<div class="tl"><div class="tl-dot"></div><div style="flex:1;font-size:13px;font-weight:600">' + esc(t.title) + '</div><div style="font-size:12px;color:#0369a1;font-weight:700">' + lbl + '</div><div style="font-size:11px;color:#94a3b8;width:90px;text-align:right">' + esc(t.deadline) + '</div></div>'; }).join("") : '<div class="muted" style="padding:6px">Không có việc đến hạn trong 7 ngày tới</div>';
+  const planNote2 = m.plan ? '<div class="note-box" style="background:#eff6ff;border:1px solid #dbeafe">' + esc(m.plan) + '</div>' : '';
+  const issueAuto2 = autoIssues.length ? '<div style="margin-bottom:8px"><div style="font-size:11px;color:#991b1b;font-weight:700;margin-bottom:5px">Tự động phát hiện:</div>' + autoIssues.map((t) => '<div class="tl" style="border-color:#fee2e2"><span style="width:8px;height:8px;border-radius:50%;background:' + STATUS[t.status].color + '"></span><span style="flex:1;font-weight:600;font-size:13px">' + esc(t.title) + '</span><span style="color:' + STATUS[t.status].color + ';font-weight:700;font-size:12px">' + STATUS[t.status].label + '</span></div>').join("") + '</div>' : '';
+  const issueNote2 = m.issue ? '<div class="note-box" style="background:#fff;border:1px solid #fecaca">' + esc(m.issue) + '</div>' : '';
+
+  const html = '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Báo cáo - ' + esc(m.name) + '</title><style>' + css + '</style></head><body>'
+    + '<button class="btn" onclick="window.print()">⬇ In / Lưu PDF</button>'
+    + '<div class="wrap">'
+    + '<div class="head">' + avatarHtml + '<div><h1>' + esc(m.name) + '</h1><div class="role">' + esc(posTitle || "") + '</div><div class="contact">' + esc(m.email) + ' • ' + esc(m.phone) + '</div></div><div class="pctbox"><div class="big">' + pct + '%</div><div class="sm">hoàn thành • ' + total + ' việc</div></div></div>'
+    + '<div class="sec"><h2>Tổng quan trạng thái</h2><div class="grid2"><div class="donut-wrap"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div class="donut-hole"><div class="n">' + total + '</div><div class="t">việc</div></div></div><div class="legend">' + (legend2 || '<span class="muted">Chưa có dữ liệu</span>') + '</div></div></div>'
+    + '<div class="sec"><h2>Danh sách công việc</h2><table><thead><tr><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + rows2 + '</tbody></table></div>'
+    + '<div class="sec"><h2>Kế hoạch tuần tiếp theo</h2><div class="plan-card">' + planTasks2 + planNote2 + '</div></div>'
+    + '<div class="sec"><h2 style="color:#dc2626"><span></span>Vướng mắc</h2><div class="issue-card">' + (issueAuto2 + issueNote2 || '<span class="muted">Không có vướng mắc</span>') + '</div></div>'
+    + '<div class="foot">Xuất ngày ' + today + (orgName ? ' • ' + esc(orgName) : '') + '</div>'
+    + '</div></body></html>';
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } else { window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank"); }
 }
