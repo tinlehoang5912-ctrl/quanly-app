@@ -25,19 +25,35 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const NODE_W = 260;
 const LINK_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#64748b"];
 
+// Bảng màu tông xanh dịu (lam → lá), đậm đến nhạt, app tự gán theo thứ tự cấp
+const TIER_PALETTE = [
+  { bg: "linear-gradient(135deg,#0c4a6e,#0369a1)", solid: "#0c4a6e", soft: "#e0f2fe", text: "#0c4a6e" }, // xanh lam đậm nhất
+  { bg: "linear-gradient(135deg,#0369a1,#0ea5e9)", solid: "#0369a1", soft: "#e0f2fe", text: "#075985" }, // xanh lam
+  { bg: "linear-gradient(135deg,#0891b2,#22d3ee)", solid: "#0891b2", soft: "#cffafe", text: "#0e7490" }, // xanh cyan
+  { bg: "linear-gradient(135deg,#0d9488,#2dd4bf)", solid: "#0d9488", soft: "#ccfbf1", text: "#0f766e" }, // xanh ngọc (lam-lá)
+  { bg: "linear-gradient(135deg,#059669,#34d399)", solid: "#059669", soft: "#d1fae5", text: "#047857" }, // xanh lá
+  { bg: "linear-gradient(135deg,#65a30d,#a3e635)", solid: "#65a30d", soft: "#ecfccb", text: "#4d7c0f" }, // xanh lá nhạt
+];
+const tierColor = (i) => TIER_PALETTE[i % TIER_PALETTE.length];
+
 // Vị trí có x,y. Liên kết tách riêng (cho phép 2 sếp 1 nhân viên)
 const seed = {
   orgName: "Dự án mới",
   logo: null,
+  tiers: [
+    { id: "tier1", name: "Giám đốc" },
+    { id: "tier2", name: "Quản lý" },
+    { id: "tier3", name: "Nhân viên" },
+  ],
   positions: [
-    { id: "pos1", title: "Ban Giám đốc", x: 360, y: 40, members: [
+    { id: "pos1", title: "Ban Giám đốc", x: 360, y: 40, tierId: "tier1", members: [
       { id: "m1", name: "LE TIN", email: "tin.lehoang32@gmail.com", phone: "0900000000", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t1", title: "Thiết lập cấu trúc dự án", status: "done", deadline: "2026-06-10", note: "Khởi tạo" },
           { id: "t2", title: "Phân quyền nhân sự", status: "in_progress", deadline: "2026-06-15", note: "" },
         ] },
     ] },
-    { id: "pos2", title: "Phòng Kinh doanh", x: 80, y: 320, members: [
+    { id: "pos2", title: "Phòng Kinh doanh", x: 80, y: 320, tierId: "tier2", members: [
       { id: "m2", name: "Nguyễn An", email: "an.nguyen@example.com", phone: "0911111111", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t3", title: "Lập kế hoạch quý 2", status: "pending_review", deadline: "2026-06-08", note: "Chờ duyệt" },
@@ -46,7 +62,7 @@ const seed = {
       { id: "m3", name: "Lê Cường", email: "cuong.le@example.com", phone: "0933333333", avatar: null, plan: "", issue: "",
         tasks: [{ id: "t8", title: "Chăm sóc khách VIP", status: "in_progress", deadline: "2026-06-18", note: "" }] },
     ] },
-    { id: "pos3", title: "Phòng Marketing", x: 640, y: 320, members: [
+    { id: "pos3", title: "Phòng Marketing", x: 640, y: 320, tierId: "tier2", members: [
       { id: "m4", name: "Trần Bình", email: "binh.tran@example.com", phone: "0922222222", avatar: null, plan: "", issue: "",
         tasks: [
           { id: "t5", title: "Thiết kế campaign", status: "in_progress", deadline: "2026-06-20", note: "" },
@@ -86,10 +102,15 @@ export default function App() {
   const logoRef = useRef(null);
 
   const { orgName, logo, positions, links } = data;
+  const tiers = data.tiers || [];
   const setPositions = (fn) => setData((d) => ({ ...d, positions: typeof fn === "function" ? fn(d.positions) : fn }));
   const setLinks = (fn) => setData((d) => ({ ...d, links: typeof fn === "function" ? fn(d.links) : fn }));
   const setOrgName = (v) => setData((d) => ({ ...d, orgName: v }));
   const setLogo = (v) => setData((d) => ({ ...d, logo: v }));
+  const setTiers = (fn) => setData((d) => ({ ...d, tiers: typeof fn === "function" ? fn(d.tiers || []) : fn }));
+  const addTier = () => setTiers((ts) => [...ts, { id: uid(), name: "Cấp mới" }]);
+  const updateTier = (id, name) => setTiers((ts) => ts.map((t) => (t.id === id ? { ...t, name } : t)));
+  const removeTier = (id) => { setTiers((ts) => ts.filter((t) => t.id !== id)); setPositions((ps) => ps.map((p) => (p.tierId === id ? { ...p, tierId: null } : p))); };
 
   const selectedPos = positions.find((p) => p.id === selected);
   const selMemberData = selMember ? (() => { const p = positions.find((x) => x.id === selMember.posId); const m = p && p.members.find((x) => x.id === selMember.memberId); return m ? { ...m, posTitle: p.title, posId: p.id } : null; })() : null;
@@ -216,12 +237,12 @@ export default function App() {
         ))}
       </div>
 
-      {view === "org" && <OrgCanvas positions={positions} links={links} onSelect={setSelected} onSelectMember={(posId, memberId) => setSelMember({ posId, memberId })} onAdd={addPosition} onMove={movePosition} onAddLink={addLink} onUpdateLink={updateLink} onRemoveLink={removeLink} />}
+      {view === "org" && <OrgCanvas positions={positions} links={links} tiers={tiers} onSelect={setSelected} onSelectMember={(posId, memberId) => setSelMember({ posId, memberId })} onAdd={addPosition} onMove={movePosition} onAddLink={addLink} onUpdateLink={updateLink} onRemoveLink={removeLink} onAddTier={addTier} onUpdateTier={updateTier} onRemoveTier={removeTier} />}
       {view === "dashboard" && <div style={{ padding: 28 }}><Dashboard positions={positions} statusCounts={statusCounts} overallPct={overallPct} allTasks={allTasks} allMembers={allMembers} /></div>}
       {view === "data" && <div style={{ padding: 28 }}><DataTable positions={positions} onSelect={setSelected} /></div>}
 
       {selectedPos && (
-        <PositionModal pos={selectedPos} onClose={() => setSelected(null)}
+        <PositionModal pos={selectedPos} tiers={tiers} onClose={() => setSelected(null)}
           onUpdatePos={(patch) => updatePosition(selectedPos.id, patch)} onRemovePos={() => removePosition(selectedPos.id)}
           onAddMember={() => addMember(selectedPos.id)} onUpdateMember={(mId, patch) => updateMember(selectedPos.id, mId, patch)} onRemoveMember={(mId) => removeMember(selectedPos.id, mId)}
           onOpenMember={(mId) => { setSelected(null); setSelMember({ posId: selectedPos.id, memberId: mId }); }} />
@@ -248,7 +269,10 @@ function Avatar({ m, size = 44 }) {
 }
 
 // ============ ORG CANVAS (kéo-thả + nối tay) ============
-function OrgCanvas({ positions, links, onSelect, onSelectMember, onAdd, onMove, onAddLink, onUpdateLink, onRemoveLink }) {
+function OrgCanvas({ positions, links, tiers, onSelect, onSelectMember, onAdd, onMove, onAddLink, onUpdateLink, onRemoveLink, onAddTier, onUpdateTier, onRemoveTier }) {
+  const tierIndex = (id) => tiers.findIndex((t) => t.id === id);
+  const tierOf = (p) => { const i = tierIndex(p.tierId); return i >= 0 ? { ...tiers[i], color: tierColor(i) } : null; };
+  const [showTiers, setShowTiers] = useState(false);
   const canvasRef = useRef(null);
   const [drag, setDrag] = useState(null);       // {id, dx, dy} kéo khối
   const [connect, setConnect] = useState(null);  // {from, x, y} đang kéo dây nối
@@ -294,12 +318,35 @@ function OrgCanvas({ positions, links, onSelect, onSelectMember, onAdd, onMove, 
   return (
     <div style={{ position: "relative" }}>
       {/* toolbar */}
-      <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 28px", background: "#fff", borderBottom: "1px solid #e2e8f0" }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 28px", background: "#fff", borderBottom: "1px solid #e2e8f0", flexWrap: "wrap" }}>
         <button onClick={onAdd} style={{ ...btn("#3b82f6") }}><Plus size={15} /> Thêm vị trí</button>
-        <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}><Move size={14} /> Kéo khối để di chuyển</span>
-        <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}><Link2 size={14} /> Kéo từ chấm xanh dưới khối sang khối khác để nối</span>
-        <span style={{ fontSize: 13, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}><Maximize2 size={14} /> Bấm đường nối để sửa/xóa</span>
+        <button onClick={() => setShowTiers((s) => !s)} style={{ ...btn(showTiers ? "#0369a1" : "#64748b") }}><Network size={15} /> Quản lý cấp</button>
+        {/* chú thích màu cấp */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginLeft: 4 }}>
+          {tiers.map((t, i) => <span key={t.id} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#475569" }}><span style={{ width: 14, height: 14, borderRadius: 4, background: tierColor(i).solid }} />{t.name}</span>)}
+        </div>
+        <span style={{ fontSize: 12, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}><Move size={13} /> Kéo khối • <Link2 size={13} /> Kéo chấm để nối • <Maximize2 size={13} /> Bấm đường nối để sửa</span>
       </div>
+
+      {/* panel quản lý cấp */}
+      {showTiers && (
+        <div style={{ padding: "14px 28px", background: "#f0f9ff", borderBottom: "1px solid #bae6fd" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#0c4a6e" }}>Các cấp phân loại (màu tự gán theo thứ tự)</div>
+            <button onClick={onAddTier} style={{ ...btn("#0369a1"), padding: "6px 11px" }}><Plus size={14} /> Thêm cấp</button>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {tiers.map((t, i) => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", border: "1px solid #bae6fd", borderRadius: 10, padding: "6px 10px" }}>
+                <span style={{ width: 18, height: 18, borderRadius: 5, background: tierColor(i).solid, flexShrink: 0 }} />
+                <input value={t.name} onChange={(e) => onUpdateTier(t.id, e.target.value)} style={{ border: "none", outline: "none", fontSize: 13, fontWeight: 600, width: 120 }} />
+                <button onClick={() => onRemoveTier(t.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444" }}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            {tiers.length === 0 && <span style={{ color: "#7dd3fc", fontSize: 13 }}>Chưa có cấp nào. Bấm "Thêm cấp".</span>}
+          </div>
+        </div>
+      )}
 
       <div ref={canvasRef} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp} onClick={() => setSelLink(null)}
         style={{ position: "relative", height: "calc(100vh - 230px)", overflow: "auto", background: "radial-gradient(#dde4ee 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
@@ -330,7 +377,7 @@ function OrgCanvas({ positions, links, onSelect, onSelectMember, onAdd, onMove, 
                 onMouseDown={(e) => { if (e.target.dataset.handle) return; const { x, y } = pointFromEvent(e); setDrag({ id: p.id, dx: x - p.x, dy: y - p.y }); }}
                 onClick={(e) => { e.stopPropagation(); if (!drag) onSelect(p.id); }}
                 style={{ background: "#fff", borderRadius: 14, boxShadow: "0 4px 16px rgba(15,23,42,.1)", border: "1px solid #e2e8f0", cursor: "grab", overflow: "hidden", userSelect: "none" }}>
-                <div style={{ background: "linear-gradient(135deg,#eff6ff,#dbeafe)", padding: "9px 14px", fontSize: 13, fontWeight: 700, color: "#1e40af", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}><Network size={14} /> {p.title}</div>
+                <div style={{ background: (tierOf(p) ? tierOf(p).color.bg : "linear-gradient(135deg,#eff6ff,#dbeafe)"), padding: "9px 14px", fontSize: 13, fontWeight: 700, color: (tierOf(p) ? "#fff" : "#1e40af"), textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}><Network size={14} /> {p.title}</div>
                 <div style={{ padding: 12 }}>
                   {p.members.length === 0 && <div style={{ textAlign: "center", color: "#cbd5e1", fontSize: 12, padding: 8 }}>Chưa có nhân viên</div>}
                   {p.members.map((m) => (
@@ -344,7 +391,7 @@ function OrgCanvas({ positions, links, onSelect, onSelectMember, onAdd, onMove, 
                       <span style={{ fontSize: 10, background: "#eff6ff", color: "#1e40af", padding: "1px 6px", borderRadius: 20, fontWeight: 600 }}>{m.tasks.length}</span>
                     </div>
                   ))}
-                  <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: "#64748b" }}>{p.members.length} nhân viên</span>{tasks.length > 0 && <span style={{ color: "#10b981", fontWeight: 600 }}>{Math.round((done / tasks.length) * 100)}%</span>}</div>
+                  <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11 }}>{tierOf(p) ? <span style={{ color: tierOf(p).color.text, fontWeight: 600, background: tierOf(p).color.soft, padding: "2px 8px", borderRadius: 20 }}>{tierOf(p).name}</span> : <span style={{ color: "#cbd5e1" }}>Chưa phân cấp</span>}{tasks.length > 0 && <span style={{ color: "#10b981", fontWeight: 600 }}>{Math.round((done / tasks.length) * 100)}%</span>}</div>
                 </div>
               </div>
               {/* chấm nối (out) */}
@@ -449,7 +496,7 @@ function DataTable({ positions, onSelect }) {
 function Badge({ status }) { const s = STATUS[status]; return <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: s.color + "18", color: s.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color }} />{s.label}</span>; }
 
 // ============ POSITION MODAL ============
-function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, onUpdateMember, onRemoveMember, onOpenMember }) {
+function PositionModal({ pos, tiers, onClose, onUpdatePos, onRemovePos, onAddMember, onUpdateMember, onRemoveMember, onOpenMember }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(640px,100%)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
@@ -459,6 +506,13 @@ function PositionModal({ pos, onClose, onUpdatePos, onRemovePos, onAddMember, on
           <button onClick={onClose} style={{ background: "rgba(255,255,255,.2)", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}><X size={18} /></button>
         </div>
         <div style={{ padding: 18, overflowY: "auto", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, padding: 12, background: "#f8fafc", borderRadius: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#475569" }}>Cấp phân loại:</span>
+            <select value={pos.tierId || ""} onChange={(e) => onUpdatePos({ tierId: e.target.value || null })} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 13, fontWeight: 600 }}>
+              <option value="">— Chưa phân cấp —</option>
+              {(tiers || []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>Nhân viên ({pos.members.length})</div>
             <button onClick={onAddMember} style={{ ...btn("#3b82f6"), padding: "7px 12px" }}><UserPlus size={15} /> Thêm nhân viên</button>
