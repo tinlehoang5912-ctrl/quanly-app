@@ -287,7 +287,7 @@ export default function App() {
           <div className="blob" style={{ width: 200, height: 200, background: "rgba(255,255,255,.07)", bottom: "10%", right: "12%", animationDelay: "2s" }} />
           <div className="blob" style={{ width: 120, height: 120, background: "rgba(255,255,255,.06)", top: "30%", right: "28%", animationDelay: "4s" }} />
           <div style={{ position: "relative", maxWidth: 820, margin: "0 auto" }}>
-            {logo && <img src={logo} alt="logo" className="fade-up" style={{ width: 76, height: 76, borderRadius: 18, objectFit: "cover", background: "#fff", padding: 4, marginBottom: 22 }} />}
+            {logo && <img src={logo} alt="logo" className="fade-up" style={{ maxHeight: 110, maxWidth: 260, objectFit: "contain", marginBottom: 22 }} />}
             <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 56, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1.05, marginBottom: 16 }}>{orgName}</h1>
             <p className="fade-up" style={{ fontSize: 19, color: "#bae6fd", maxWidth: 580, margin: "0 auto 32px", animationDelay: ".1s", lineHeight: 1.6 }}>
               Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
@@ -877,7 +877,7 @@ function openReport({ orgName, logo, positions, allTasks, statusCounts, overallP
     + '.head::after{content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.08)}'
     + '.head::before{content:"";position:absolute;right:60px;bottom:-90px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)}'
     + '.head .row{position:relative;display:flex;align-items:center;gap:18px;z-index:1}'
-    + '.head img{width:66px;height:66px;border-radius:16px;object-fit:cover;background:#fff;padding:4px}'
+    + '.head img{max-height:70px;max-width:200px;object-fit:contain}'
     + '.head h1{font-size:28px;font-weight:800;letter-spacing:-.5px}'
     + '.head p{color:#bae6fd;font-size:13px;margin-top:5px}'
     + '.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:24px}'
