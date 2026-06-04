@@ -47,23 +47,23 @@ const seed = {
   ],
   positions: [
     { id: "pos1", title: "Ban Giám đốc", x: 360, y: 40, tierId: "tier1", members: [
-      { id: "m1", name: "LE TIN", email: "tin.lehoang32@gmail.com", phone: "0900000000", avatar: null, plan: "", issue: "",
+      { id: "m1", name: "LE TIN", email: "tin.lehoang32@gmail.com", phone: "0900000000", avatar: null, plan: "", weekResult: "", weeks: [], issue: "",
         tasks: [
           { id: "t1", title: "Thiết lập cấu trúc dự án", status: "done", deadline: "2026-06-10", note: "Khởi tạo" },
           { id: "t2", title: "Phân quyền nhân sự", status: "in_progress", deadline: "2026-06-15", note: "" },
         ] },
     ] },
     { id: "pos2", title: "Phòng Kinh doanh", x: 80, y: 320, tierId: "tier2", members: [
-      { id: "m2", name: "Nguyễn An", email: "an.nguyen@example.com", phone: "0911111111", avatar: null, plan: "", issue: "",
+      { id: "m2", name: "Nguyễn An", email: "an.nguyen@example.com", phone: "0911111111", avatar: null, plan: "", weekResult: "", weeks: [], issue: "",
         tasks: [
           { id: "t3", title: "Lập kế hoạch quý 2", status: "pending_review", deadline: "2026-06-08", note: "Chờ duyệt" },
           { id: "t4", title: "Báo cáo doanh số", status: "overdue", deadline: "2026-05-28", note: "Trễ" },
         ] },
-      { id: "m3", name: "Lê Cường", email: "cuong.le@example.com", phone: "0933333333", avatar: null, plan: "", issue: "",
+      { id: "m3", name: "Lê Cường", email: "cuong.le@example.com", phone: "0933333333", avatar: null, plan: "", weekResult: "", weeks: [], issue: "",
         tasks: [{ id: "t8", title: "Chăm sóc khách VIP", status: "in_progress", deadline: "2026-06-18", note: "" }] },
     ] },
     { id: "pos3", title: "Phòng Marketing", x: 640, y: 320, tierId: "tier2", members: [
-      { id: "m4", name: "Trần Bình", email: "binh.tran@example.com", phone: "0922222222", avatar: null, plan: "", issue: "",
+      { id: "m4", name: "Trần Bình", email: "binh.tran@example.com", phone: "0922222222", avatar: null, plan: "", weekResult: "", weeks: [], issue: "",
         tasks: [
           { id: "t5", title: "Thiết kế campaign", status: "in_progress", deadline: "2026-06-20", note: "" },
           { id: "t6", title: "Đăng bài social", status: "not_started", deadline: "2026-06-25", note: "" },
@@ -149,6 +149,12 @@ export default function App() {
   const [cloudState, setCloudState] = useState("idle"); // idle | loading | loaded | err
   const [screen, setScreen] = useState("landing"); // landing | app
   const [showTheme, setShowTheme] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 768);
+  React.useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [selected, setSelected] = useState(null);
   const [selMember, setSelMember] = useState(null); // {posId, memberId}
   const [syncState, setSyncState] = useState("idle");
@@ -231,8 +237,17 @@ export default function App() {
   const removeLink = (id) => setLinks((ls) => ls.filter((l) => l.id !== id));
 
   // Member/Task CRUD
-  const addMember = (posId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: [...pos.members, { id: uid(), name: "Nhân viên mới", email: "email@example.com", phone: "0000000000", avatar: null, plan: "", issue: "", tasks: [] }] }); };
+  const addMember = (posId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: [...pos.members, { id: uid(), name: "Nhân viên mới", email: "email@example.com", phone: "0000000000", avatar: null, plan: "", weekResult: "", weeks: [], issue: "", tasks: [] }] }); };
   const updateMember = (posId, mId, patch) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: pos.members.map((m) => (m.id === mId ? { ...m, ...patch } : m)) }); };
+  // Chốt tuần: lưu mục tiêu + số liệu hiện tại vào lịch sử, mở tuần mới
+  const closeWeek = (posId, mId) => {
+    const pos = positions.find((p) => p.id === posId);
+    const m = pos.members.find((x) => x.id === mId);
+    const done = m.tasks.filter((t) => t.status === "done").length;
+    const record = { id: uid(), date: new Date().toISOString().slice(0, 10), goal: m.plan || "", result: m.weekResult || "", done, total: m.tasks.length };
+    const weeks = [...(m.weeks || []), record];
+    updateMember(posId, mId, { weeks, plan: "", weekResult: "" }); // mở tuần mới: xóa mục tiêu & kết quả
+  };
   const removeMember = (posId, mId) => { const pos = positions.find((p) => p.id === posId); updatePosition(posId, { members: pos.members.filter((m) => m.id !== mId) }); };
   const addTask = (posId, mId) => { const pos = positions.find((p) => p.id === posId); const m = pos.members.find((x) => x.id === mId); updateMember(posId, mId, { tasks: [...m.tasks, { id: uid(), title: "Công việc mới", status: "not_started", deadline: "", note: "" }] }); };
   const updateTask = (posId, mId, tId, patch) => { const pos = positions.find((p) => p.id === posId); const m = pos.members.find((x) => x.id === mId); updateMember(posId, mId, { tasks: m.tasks.map((t) => (t.id === tId ? { ...t, ...patch } : t)) }); };
@@ -276,6 +291,14 @@ export default function App() {
         .fade-up{animation:fadeUp .8s cubic-bezier(.2,.8,.2,1) both}
         .app-tab{transition:all .2s}
         .app-tab:hover{background:#f1f5f9!important}
+        /* Mobile: gợi ý xoay ngang khi xem sơ đồ ở chế độ dọc */
+        @media (max-width:767px) and (orientation:portrait){
+          .orient-hint{display:flex!important}
+        }
+        @media (max-width:767px){
+          .modal-card{width:100%!important;max-width:100%!important;max-height:96vh!important;border-radius:16px 16px 0 0!important}
+          .hide-mobile{display:none!important}
+        }
       `}</style>
 
       {/* Khung trượt dọc: 2 màn full chồng nhau, dịch theo screen */}
@@ -288,7 +311,7 @@ export default function App() {
           <div className="blob" style={{ width: 120, height: 120, background: "rgba(255,255,255,.06)", top: "30%", right: "28%", animationDelay: "4s" }} />
           <div style={{ position: "relative", maxWidth: 820, margin: "0 auto" }}>
             {logo && <img src={logo} alt="logo" className="fade-up" style={{ maxHeight: 110, maxWidth: 260, objectFit: "contain", marginBottom: 22 }} />}
-            <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: 56, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1.05, marginBottom: 16 }}>{orgName}</h1>
+            <h1 className="fade-up" style={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: isMobile ? 34 : 56, fontWeight: 800, letterSpacing: "-1.5px", lineHeight: 1.05, marginBottom: 16 }}>{orgName}</h1>
             <p className="fade-up" style={{ fontSize: 19, color: "#bae6fd", maxWidth: 580, margin: "0 auto 32px", animationDelay: ".1s", lineHeight: 1.6 }}>
               Quản lý dự án, sơ đồ tổ chức và tiến độ công việc — trực quan, đồng bộ thời gian thực.
             </p>
@@ -377,6 +400,7 @@ export default function App() {
           onAddTask={() => addTask(selMember.posId, selMember.memberId)}
           onUpdateTask={(tId, patch) => updateTask(selMember.posId, selMember.memberId, tId, patch)}
           onRemoveTask={(tId) => removeTask(selMember.posId, selMember.memberId, tId)}
+          onCloseWeek={() => closeWeek(selMember.posId, selMember.memberId)}
           onReport={(mem) => openMemberReport({ member: mem, posTitle: selMemberData.posTitle })} />
       )}
 
@@ -465,6 +489,10 @@ function OrgCanvas({ positions, links, tiers, onSelect, onSelectMember, onAdd, o
 
   return (
     <div style={{ position: "relative" }}>
+      {/* toolbar */}
+      <div className="orient-hint" style={{ display: "none", padding: "12px 20px", background: "#fffbeb", borderBottom: "1px solid #fde68a", color: "#92400e", fontSize: 13, alignItems: "center", gap: 8 }}>
+        📱 Xoay ngang điện thoại để xem sơ đồ rõ hơn, hoặc kéo để di chuyển trong sơ đồ.
+      </div>
       {/* toolbar */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 28px", background: "#fff", borderBottom: "1px solid #e2e8f0", flexWrap: "wrap" }}>
         <button onClick={onAdd} style={{ ...btn("#3b82f6") }}><Plus size={15} /> Thêm vị trí</button>
@@ -681,7 +709,7 @@ function Badge({ status }) { const s = STATUS[status]; return <span style={{ dis
 function PositionModal({ pos, tiers, onClose, onUpdatePos, onRemovePos, onAddMember, onUpdateMember, onRemoveMember, onOpenMember }) {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 50 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(640px,100%)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(640px,100%)", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
         <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: 20, display: "flex", alignItems: "center", gap: 12 }}>
           <Network size={26} color="#fff" />
           <input value={pos.title} onChange={(e) => onUpdatePos({ title: e.target.value })} style={{ background: "none", border: "none", outline: "none", color: "#fff", fontSize: 20, fontWeight: 700, flex: 1 }} />
@@ -729,7 +757,7 @@ function PositionModal({ pos, tiers, onClose, onUpdatePos, onRemovePos, onAddMem
   );
 }
 
-function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, onRemoveTask, onReport }) {
+function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, onRemoveTask, onCloseWeek, onReport }) {
   const avaRef = useRef(null);
   const [uploadingAva, setUploadingAva] = useState(false);
   const handleAva = (e) => {
@@ -752,7 +780,7 @@ function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, 
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 60 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(820px,100%)", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+      <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "min(820px,100%)", maxHeight: "92vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
         {/* header */}
         <div style={{ background: "linear-gradient(135deg,#1e40af,#3b82f6)", padding: 22, display: "flex", gap: 16, alignItems: "center", position: "relative" }}>
           <div onClick={() => avaRef.current.click()} title="Đổi ảnh" style={{ position: "relative", cursor: "pointer" }}>
@@ -819,11 +847,40 @@ function MemberModal({ m, posTitle, onClose, onUpdate, onAddTask, onUpdateTask, 
           ))}
           </>)}
 
-          {/* KẾ HOẠCH */}
-          <div style={{ marginTop: 16, padding: 14, background: "#eff6ff", borderRadius: 12, border: "1px solid #dbeafe" }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#1e40af", marginBottom: 8 }}>📋 Kế hoạch tuần tới</div>
-            <textarea value={m.plan || ""} onChange={(e) => onUpdate({ plan: e.target.value })} placeholder="Mục tiêu, kế hoạch cho tuần tiếp theo..." rows={3} style={{ width: "100%", border: "1px solid #bfdbfe", borderRadius: 8, padding: 9, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }} />
-          </div>
+          {/* THEO DÕI TUẦN */}
+          {!m.hideTasks && (() => {
+            const lastWeek = (m.weeks && m.weeks.length) ? m.weeks[m.weeks.length - 1] : null;
+            return (
+              <div style={{ marginTop: 16, padding: 14, background: "#eff6ff", borderRadius: 12, border: "1px solid #dbeafe" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>📋 Theo dõi tuần</div>
+                  <button onClick={() => { if (window.confirm("Chốt tuần này? Mục tiêu & kết quả hiện tại sẽ lưu vào lịch sử, và mở tuần mới trống.")) onCloseWeek(); }} style={{ ...btn("#0891b2"), padding: "6px 11px" }}>✓ Chốt tuần</button>
+                </div>
+                {/* Mục tiêu tuần trước + đối chiếu */}
+                {lastWeek && (
+                  <div style={{ background: "#fff", borderRadius: 8, padding: 10, marginBottom: 10, border: "1px solid #dbeafe" }}>
+                    <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600, marginBottom: 4 }}>TUẦN TRƯỚC (chốt {lastWeek.date})</div>
+                    <div style={{ fontSize: 13 }}><b>Mục tiêu đã đặt:</b> {lastWeek.goal || <span style={{ color: "#94a3b8" }}>(không ghi)</span>}</div>
+                    {lastWeek.result && <div style={{ fontSize: 13, marginTop: 3 }}><b>Kết quả:</b> {lastWeek.result}</div>}
+                    <div style={{ fontSize: 13, marginTop: 5, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span><b>Hoàn thành lúc chốt:</b> {lastWeek.done}/{lastWeek.total} việc</span>
+                      <span style={{ background: "#10b98118", color: "#059669", padding: "1px 8px", borderRadius: 20, fontWeight: 700, fontSize: 12 }}>{lastWeek.total ? Math.round(lastWeek.done / lastWeek.total * 100) : 0}%</span>
+                    </div>
+                    {/* đối chiếu hiện tại */}
+                    <div style={{ fontSize: 13, marginTop: 6, paddingTop: 6, borderTop: "1px dashed #dbeafe" }}>
+                      <b>Hiện tại:</b> {m.tasks.filter((t) => t.status === "done").length}/{m.tasks.length} việc
+                      {(() => { const nowPct = m.tasks.length ? Math.round(m.tasks.filter((t) => t.status === "done").length / m.tasks.length * 100) : 0; const lastPct = lastWeek.total ? Math.round(lastWeek.done / lastWeek.total * 100) : 0; const diff = nowPct - lastPct; return <span style={{ marginLeft: 8, fontWeight: 700, color: diff >= 0 ? "#059669" : "#ef4444" }}>{diff >= 0 ? "▲ +" : "▼ "}{diff}% so với lúc chốt</span>; })()}
+                    </div>
+                  </div>
+                )}
+                {/* mục tiêu tuần này */}
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Mục tiêu tuần này:</div>
+                <textarea value={m.plan || ""} onChange={(e) => onUpdate({ plan: e.target.value })} placeholder="Mục tiêu, kế hoạch cho tuần này..." rows={2} style={{ width: "100%", border: "1px solid #bfdbfe", borderRadius: 8, padding: 9, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", marginBottom: 8 }} />
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 4 }}>Kết quả đạt được (ghi chú):</div>
+                <textarea value={m.weekResult || ""} onChange={(e) => onUpdate({ weekResult: e.target.value })} placeholder="Tuần này đã làm được gì so với mục tiêu..." rows={2} style={{ width: "100%", border: "1px solid #bfdbfe", borderRadius: 8, padding: 9, fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none" }} />
+              </div>
+            );
+          })()}
 
           {/* VƯỚNG MẮC */}
           <div style={{ marginTop: 12, padding: 14, background: "#fef2f2", borderRadius: 12, border: "1px solid #fecaca" }}>
@@ -1003,6 +1060,17 @@ function openMemberReport({ member, posTitle, orgName, logo }) {
   const rows2 = m.tasks.length ? m.tasks.map((t) => '<tr><td>' + esc(t.title) + '</td><td><span class="pill" style="background:' + STATUS[t.status].color + '1a;color:' + STATUS[t.status].color + '">' + STATUS[t.status].label + '</span></td><td>' + esc(t.deadline) + '</td><td>' + esc(t.note) + '</td></tr>').join("") : '<tr><td colspan="4" style="text-align:center" class="muted">Chưa có công việc</td></tr>';
   const planTasks2 = next7.length ? next7.map((t) => { const days = Math.ceil((t.d - todayD) / 86400000); const lbl = days === 0 ? "Hôm nay" : ("Còn " + days + " ngày"); return '<div class="tl"><div class="tl-dot"></div><div style="flex:1;font-size:13px;font-weight:600">' + esc(t.title) + '</div><div style="font-size:12px;color:#0369a1;font-weight:700">' + lbl + '</div><div style="font-size:11px;color:#94a3b8;width:90px;text-align:right">' + esc(t.deadline) + '</div></div>'; }).join("") : '<div class="muted" style="padding:6px">Không có việc đến hạn trong 7 ngày tới</div>';
   const planNote2 = m.plan ? '<div class="note-box" style="background:#eff6ff;border:1px solid #dbeafe">' + esc(m.plan) + '</div>' : '';
+  const lastWk = (m.weeks && m.weeks.length) ? m.weeks[m.weeks.length - 1] : null;
+  const nowDone = m.tasks.filter((t) => t.status === "done").length;
+  const nowPctW = m.tasks.length ? Math.round(nowDone / m.tasks.length * 100) : 0;
+  const weekSection = lastWk ? ('<div class="sec"><h2>Đối chiếu mục tiêu tuần trước</h2><div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;font-size:13px">'
+    + '<div style="color:#64748b;font-size:11px;font-weight:700;margin-bottom:6px">TUẦN TRƯỚC (chốt ' + esc(lastWk.date) + ')</div>'
+    + '<div><b>Mục tiêu đã đặt:</b> ' + (esc(lastWk.goal) || '<span style="color:#94a3b8">(không ghi)</span>') + '</div>'
+    + (lastWk.result ? '<div style="margin-top:3px"><b>Kết quả:</b> ' + esc(lastWk.result) + '</div>' : '')
+    + '<div style="margin-top:5px"><b>Hoàn thành lúc chốt:</b> ' + lastWk.done + '/' + lastWk.total + ' việc (' + (lastWk.total ? Math.round(lastWk.done / lastWk.total * 100) : 0) + '%)</div>'
+    + '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0"><b>Hiện tại:</b> ' + nowDone + '/' + m.tasks.length + ' việc (' + nowPctW + '%) '
+    + (() => { const lp = lastWk.total ? Math.round(lastWk.done / lastWk.total * 100) : 0; const d = nowPctW - lp; return '<span style="font-weight:700;color:' + (d >= 0 ? "#059669" : "#ef4444") + '">' + (d >= 0 ? "▲ +" : "▼ ") + d + '%</span>'; })()
+    + '</div></div></div>') : '';
   const issueAuto2 = autoIssues.length ? '<div style="margin-bottom:8px"><div style="font-size:11px;color:#991b1b;font-weight:700;margin-bottom:5px">Tự động phát hiện:</div>' + autoIssues.map((t) => '<div class="tl" style="border-color:#fee2e2"><span style="width:8px;height:8px;border-radius:50%;background:' + STATUS[t.status].color + '"></span><span style="flex:1;font-weight:600;font-size:13px">' + esc(t.title) + '</span><span style="color:' + STATUS[t.status].color + ';font-weight:700;font-size:12px">' + STATUS[t.status].label + '</span></div>').join("") + '</div>' : '';
   const issueNote2 = m.issue ? '<div class="note-box" style="background:#fff;border:1px solid #fecaca">' + esc(m.issue) + '</div>' : '';
 
@@ -1012,7 +1080,7 @@ function openMemberReport({ member, posTitle, orgName, logo }) {
     + '<div class="head">' + avatarHtml + '<div><h1>' + esc(m.name) + '</h1><div class="role">' + esc(posTitle || "") + '</div><div class="contact">' + esc(m.email) + ' • ' + esc(m.phone) + '</div></div><div class="pctbox"><div class="big">' + pct + '%</div><div class="sm">hoàn thành • ' + total + ' việc</div></div></div>'
     + '<div class="sec"><h2>Tổng quan trạng thái</h2><div class="grid2"><div class="donut-wrap"><div class="donut" style="background:conic-gradient(' + (segs || "#e2e8f0 0% 100%") + ')"></div><div class="donut-hole"><div class="n">' + total + '</div><div class="t">việc</div></div></div><div class="legend">' + (legend2 || '<span class="muted">Chưa có dữ liệu</span>') + '</div></div></div>'
     + '<div class="sec"><h2>Danh sách công việc</h2><table><thead><tr><th>Công việc</th><th>Trạng thái</th><th>Deadline</th><th>Ghi chú</th></tr></thead><tbody>' + rows2 + '</tbody></table></div>'
-    + '<div class="sec"><h2>Kế hoạch tuần tiếp theo</h2><div class="plan-card">' + planTasks2 + planNote2 + '</div></div>'
+    + '<div class="sec"><h2>Kế hoạch tuần tiếp theo</h2><div class="plan-card">' + planTasks2 + planNote2 + '</div></div>' + weekSection
     + '<div class="sec"><h2 style="color:#dc2626"><span></span>Vướng mắc</h2><div class="issue-card">' + (issueAuto2 + issueNote2 || '<span class="muted">Không có vướng mắc</span>') + '</div></div>'
     + '<div class="foot">Xuất ngày ' + today + (orgName ? ' • ' + esc(orgName) : '') + '</div>'
     + '</div></body></html>';
